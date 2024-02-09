@@ -1,0 +1,44 @@
+{
+  "$schema": "https://raw.githubusercontent.com/streetsidesoftware/cspell/main/cspell.schema.json",
+  "version": "0.2",
+  "language": "en",
+  "words": [
+    "airbnb",
+    "sonarjs",
+    "fbca"
+  ],
+  "dictionaries": [
+    "companies",
+    "cpp",
+    "en_us",
+    "en-gb",
+    "fonts",
+    "fullstack",
+    "html",
+    "lorem-ipsum",
+    "node",
+    "npm",
+    "pt-br",
+    "typescript"
+  ],
+  "ignorePaths": [
+    "*.spec.tsx.snap",
+    "dist",
+    "node_modules",
+    "nx.json",
+    "package.json",
+    "pnpm-lock.yaml",
+    "tmp",
+    "*.sh",
+    ".env/.env.*",
+    ".vscode",
+    "next.config.js",
+    "commitlint.config.js",
+    "cspell.json",
+    ".gitignore",
+    "CHANGELOG.md"
+  ],
+  "allowCompoundWords": true,
+  "useGitignore": true,
+  "caseSensitive": true
+}

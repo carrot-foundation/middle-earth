@@ -1,0 +1,8 @@
+node_modules
+coverage
+dist
+cache
+.eslintrc.js
+coverage.json
+.next
+html

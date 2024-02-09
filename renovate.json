@@ -1,0 +1,20 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:best-practices", ":dependencyDashboard"],
+  "dependencyDashboard": true,
+  "automerge": true,
+  "automergeType": "pr",
+  "reviewers": ["team:Developers"],
+  "schedule": ["on tuesday and thursday"],
+  "packageRules": [
+    {
+      "matchPackagePatterns": ["*"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "all non-major dependencies",
+      "groupSlug": "all-minor-patch"
+    }
+  ],
+  "major": {
+    "dependencyDashboardApproval": true
+  }
+}

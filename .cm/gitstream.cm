@@ -1,0 +1,175 @@
+# -*- mode: yaml -*-
+# +----------------------------------------------------------------------------+
+# | WARNING: This file controls repo automations, use caution when modifying   |
+# +----------------------------------------------------------------------------+
+# | This file contains one or more /:\ gitStream automations:                  |
+# | https:// docs.gitstream.cm                                                 |
+# |                                                                            |
+# | gitStream uses YAML syntax with nunjucks templating via Jinja 2.           |
+# |                                                                            |
+# | Automations follow an "if this, then that" execution format.               |
+# | More info here: https://docs.gitstream.cm/how-it-works/                    |
+# |                                                                            |
+# +----------------------------------------------------------------------------+
+
+# /:\ gitStream Reference Docs:
+#    Context Variables: https://docs.gitstream.cm/context-variables/
+#    Filter Functions: https://docs.gitstream.cm/filter-functions/
+#    Automation Actions: https://docs.gitstream.cm/automation-actions/
+
+manifest:
+  version: 1.0
+
+# +----------------------------------------------------------------------------+
+# | Customize This Section                                                     |
+# +----------------------------------------------------------------------------+
+
+review_team: carrot-foundation/developers
+
+# List of files that should trigger a sensitive file change review.
+sensitive:
+
+# Files to exclude from gitStream automations.
+config:
+  ignore_files:
+    - 'pnpm-lock.yaml'
+    - 'package.json'
+    - '*.snap'
+
+# Set long_review_threshold to the number of minutes that should trigger extra review requirements.
+long_review_threshold: 5
+
+# +----------------------------------------------------------------------------+
+# | Automations
+# +----------------------------------------------------------------------------+
+
+automations:
+  auto_approve_renovate:
+    if:
+      - {{ pr.author | match(term='renovate') }}
+    run:
+      - action: add-label@v1
+        args:
+          label: "Auto Approved"
+          color: {{ colors.green }}
+      - action: approve@v1
+
+  estimated_time_to_review:
+    if:
+      - true
+    run:
+      - action: add-label@v1
+        args:
+          label: "{{ calc.etr }} min review"
+          color: {{ colors.red if (calc.etr >= 20) else ( colors.yellow if (calc.etr >= 5) else colors.green ) }}
+
+  explain_code_experts:
+    if:
+      - true
+    run:
+      - action: explain-code-experts@v1
+        args:
+          gt: 10
+
+  label_unresolved_threads:
+    if:
+      - {{ pr.status == 'open' }}
+      - {{ pr.unresolved_threads }}
+    run:
+      - action: add-label@v1
+        args:
+          label: 🚨 {{ pr.unresolved_threads }} Unresolved Thread(s)
+          color: {{ colors.yellow }}
+
+  percent_new_code:
+    if:
+      - true
+    run:
+      - action: add-comment@v1
+        args:
+          comment: |
+            This PR is {{ changes.ratio }}% new code.
+
+  approve_safe_changes:
+    if:
+      - {{ is.safe_change }}
+    run:
+      - action: add-label@v1
+        args:
+          label: Safe Change
+          color: {{ colors.green }}
+      - action: approve@v1
+      - action: add-comment@v1
+        args:
+          comment: |
+            This PR is considered a safe change and has been automatically approved.
+
+  require_one_review:
+    if:
+      - {{ not has.sensitive_files }}
+      - {{ is.quick_review }}
+      - {{ approvals.zero }}
+    run:
+      - action: add-label@v1
+        args:
+          label: ⏳ Waiting for 1 reviewer
+          color: {{ colors.yellow }}
+      - action: add-reviewers@v1
+        args:
+          reviewers: [{{ review_team }}]
+          unless_reviewers_set: true
+      - action: set-required-approvals@v1
+        args:
+          approvals: 1
+
+  require_two_reviews:
+    if:
+      - {{ is.long_review or has.sensitive_files }}
+      - {{ approvals.ltTwo }}
+    run:
+      - action: add-label@v1
+        args:
+          label: {{ '⏳ Waiting for 2 reviewers' if (approvals.zero) else '⏳ Waiting for 1 reviewer' }}
+          color: {{ colors.yellow }}
+      - action: add-reviewers@v1
+        args:
+          reviewers: [{{ review_team }}]
+          unless_reviewers_set: true
+      - action: set-required-approvals@v1
+        args:
+          approvals: 2
+
+# +----------------------------------------------------------------------------+
+# | Custom Expressions                                                         |
+# | https://docs.gitstream.cm/how-it-works/#custom-expressions                 |
+# +----------------------------------------------------------------------------+
+
+calc:
+  etr: {{ branch | estimatedReviewTime }}
+
+has:
+  sensitive_files: {{ files | match(list=sensitive) | some }}
+
+is:
+  safe_change: {{ (source.diff.files | isFormattingChange) or (files | allDocs) or (files | allTests) or (files | allImages) }}
+  quick_review: {{ files | length <= 7 and calc.etr <= long_review_threshold }}
+  long_review: {{ files | length > 7 or calc.etr > long_review_threshold }}
+
+approvals:
+  zero: {{ pr.approvals | length == 0 }}
+  gtZero: {{ pr.approvals | length > 0 }}
+  gtOne: {{ pr.approvals | length > 1 }}
+  ltTwo: {{ pr.approvals | length < 2 }}
+
+changes:
+  additions: {{ branch.diff.files_metadata | map(attr='additions') | sum }}
+  deletions: {{ branch.diff.files_metadata | map(attr='deletions') | sum }}
+  ratio: {{ (changes.additions / (changes.additions + changes.deletions)) * 100 | round(2) }}
+
+colors:
+  red: 'b60205'
+  orange: 'd93f0b'
+  yellow: 'fbca04'
+  green: '0e8a16'
+  blue: '1d76db'
+  purple: '5319e7'
