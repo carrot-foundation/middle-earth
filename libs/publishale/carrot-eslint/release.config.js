@@ -1,4 +1,5 @@
 module.exports = {
+  branches: ['main'],
   commitPaths: ['libs/publishale/carrot-eslint/*'],
   extends: '../../../release.config.base.js',
   pkgRoot: 'dist/carrot-eslint',

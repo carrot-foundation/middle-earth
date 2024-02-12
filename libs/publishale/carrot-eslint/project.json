@@ -18,7 +18,8 @@
     "release": {
       "executor": "@nx/nx:run-commands",
       "options": {
-        "command": "pnpx semantic-release-plus --extends .libs/publishale/carrot-eslint/release.config.js"
+        "command": "pnpx semantic-release-plus --extends .libs/publishale/carrot-eslint/release.config.js",
+        "parallel": false
       }
     }
   },
