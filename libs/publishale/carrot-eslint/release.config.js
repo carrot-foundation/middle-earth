@@ -1,6 +1,6 @@
 module.exports = {
   commitPaths: ['libs/publishale/carrot-eslint/*'],
-  extends: 'release.config.js',
+  extends: 'release.config.base.js',
   pkgRoot: 'dist/carrot-eslint',
   plugins: [
     '@semantic-release/release-notes-generator',
