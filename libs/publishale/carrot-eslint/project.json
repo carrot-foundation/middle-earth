@@ -1,0 +1,20 @@
+{
+  "name": "publishable-carrot-eslint",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "carrot-eslint/src",
+  "projectType": "library",
+  "targets": {
+    "build": {
+      "executor": "@nx/js:swc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/carrot-eslint",
+        "main": "libs/publishale/carrot-eslint/src/index.ts",
+        "tsConfig": "libs/publishale/carrot-eslint/tsconfig.lib.json",
+        "assets": ["carrot-eslint/*.md"]
+      }
+    },
+    "lint": {}
+  },
+  "tags": []
+}

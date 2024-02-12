@@ -16,7 +16,8 @@
     "source.fixAll": "always"
   },
   "conventionalCommits.scopes": [
-    "config"
+    "config",
+    "lib"
   ],
   "cSpell.words": [],
   "[json]": {
