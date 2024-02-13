@@ -10,7 +10,7 @@
       "options": {
         "outputPath": "dist/carrot-eslint",
         "main": "libs/publishale/carrot-eslint/src/index.ts",
-        "tsConfig": "libs/publishale/carrot-eslint/tsconfig.lib.json",
+        "tsConfig": "libs/publishale/carrot-eslint/tsconfig.library.json",
         "assets": ["carrot-eslint/*.md"]
       }
     },
