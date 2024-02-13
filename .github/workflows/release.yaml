@@ -30,7 +30,6 @@ jobs:
       - name: Create release
         env:
           GH_TOKEN: ${{ secrets.ADMIN_GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.ADMIN_GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
           pnpm nx affected --target release
-
