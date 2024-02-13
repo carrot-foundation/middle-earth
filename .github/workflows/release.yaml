@@ -16,15 +16,22 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.ADMIN_GITHUB_TOKEN }}
 
-      - uses: ./.github/actions/install-node-dependencies
+      - uses: ./.github/actions/prepare-to-run-nx
 
       - name: Setup Git
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
+      - name: Build
+        run: |
+          pnpm nx affected --target build --parallel 3
+
       - name: Create release
         run: pnpm semantic-release
         env:
           GH_TOKEN: ${{ secrets.ADMIN_GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.ADMIN_GITHUB_TOKEN }}
+        run: |
+          pnpx nx affected --target release --all
 
