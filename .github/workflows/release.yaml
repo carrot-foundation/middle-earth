@@ -32,5 +32,5 @@ jobs:
           GH_TOKEN: ${{ secrets.ADMIN_GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.ADMIN_GITHUB_TOKEN }}
         run: |
-          pnpm nx affected --target release --all
+          pnpm nx affected --target release
 
