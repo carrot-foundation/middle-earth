@@ -18,7 +18,7 @@ module.exports = {
     [
       '@semantic-release/git',
       {
-        assets: ['CHANGELOG.md', 'package.json'],
+        assets: [`${sourceRoot}}CHANGELOG.md`, `${sourceRoot}/package.json`],
         message:
           'release(version): Release carrot-eslint ' +
           // eslint-disable-next-line no-template-curly-in-string
