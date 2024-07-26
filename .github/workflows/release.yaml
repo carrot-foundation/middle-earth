@@ -38,4 +38,5 @@ jobs:
       - name: Create release
         run: pnpm semantic-release
         env:
-          GH_TOKEN: ${{ secrets.ADMIN_GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.ADMIN_GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
