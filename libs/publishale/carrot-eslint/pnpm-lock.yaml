@@ -1,0 +1,25 @@
+lockfileVersion: '6.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+dependencies:
+  '@swc/helpers':
+    specifier: ~0.5.2
+    version: 0.5.12
+
+packages:
+  /@swc/helpers@0.5.12:
+    resolution:
+      integrity: sha512-KMZNXiGibsW9kvZAO1Pam2JPTDBm+KSHMMHWdsyI/1DbIZjT2A6Gy3hblVXUMEDvUAKq+e0vL0X0o54owWji7g==
+
+    dependencies:
+      tslib: 2.6.3
+    dev: false
+
+  /tslib@2.6.3:
+    resolution:
+      integrity: sha512-xNvxJEOUiWPGhUuUdQgAJPKOOJfGnIyKySOc09XkKsgdUV/3E2zvwZYdejjmRgPCgcym1juLH3226yA7sEFJKQ==
+
+    dev: false

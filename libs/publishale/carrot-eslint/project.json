@@ -15,7 +15,8 @@
       }
     },
     "lint": {},
-    "version": {}
+    "version": {},
+    "release": {}
   },
   "tags": []
 }
