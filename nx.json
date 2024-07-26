@@ -31,6 +31,23 @@
         "commitMessageFormat": "chore(project-version): bump ${projectName} to ${version} [skip ci]"
       }
     },
+    "build": {
+      "executor": "@nx/js:swc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/{projectName}",
+        "main": "{projectRoot}/src/index.ts",
+        "tsConfig": "{projectRoot}/tsconfig.library.json",
+        "assets": ["{projectRoot}/carrot-eslint/*.md"]
+      }
+    },
+    "publish": {
+      "dependsOn": ["^build"],
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "npm publish ./dist/{projectName} --access public"
+      }
+    },
     "release": {
       "executor": "nx:run-commands",
       "outputs": ["{projectRoot}/src/generated/**"],

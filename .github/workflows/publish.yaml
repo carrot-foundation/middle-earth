@@ -1,4 +1,4 @@
-name: Release
+name: Publish
 
 on:
   push:
@@ -6,14 +6,10 @@ on:
       - main
 
 jobs:
-  release:
-    permissions:
-      contents: write
-      issues: write
-      pull-requests: write
-      id-token: write
-    name: Release
+  publish:
+    name: Publish
     runs-on: ubuntu-latest
+    needs: release
 
     steps:
       - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
@@ -28,15 +24,9 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Projects Version
+      - name: Publish Libs to NPM
         run: |
-          pnpm nx affected --target=version --parallel=1
-        env:
-          GITHUB_TOKEN: ${{ secrets.ADMIN_GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      - name: Create release
-        run: pnpm semantic-release
+          pnpm nx affected --target=publish --parallel=1
         env:
           GITHUB_TOKEN: ${{ secrets.ADMIN_GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

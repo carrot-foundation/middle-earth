@@ -4,6 +4,7 @@ module.exports = {
   preset: 'conventionalcommits',
   plugins: [
     '@semantic-release/github',
+    '@semantic-release/npm',
     '@semantic-release/commit-analyzer',
     [
       '@semantic-release/release-notes-generator',
