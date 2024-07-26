@@ -1,3 +1,10 @@
+## [1.0.2](https://github.com/carrot-foundation/middle-earth/compare/v1.0.1...v1.0.2) (2024-07-26)
+
+
+### ci
+
+* remove needs key from job ([5aabcdd](https://github.com/carrot-foundation/middle-earth/commit/5aabcdd5d099b779402ca3462ac11935063c0254))
+
 ## [1.0.1](https://github.com/carrot-foundation/middle-earth/compare/v1.0.0...v1.0.1) (2024-07-26)
 
 
