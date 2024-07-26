@@ -15,10 +15,7 @@
   "editor.codeActionsOnSave": {
     "source.fixAll": "always"
   },
-  "conventionalCommits.scopes": [
-    "config",
-    "lib"
-  ],
+  "conventionalCommits.scopes": ["config", "lib", "release"],
   "cSpell.words": [],
   "[json]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode"
