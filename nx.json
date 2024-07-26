@@ -23,6 +23,14 @@
       "dependsOn": ["^build"],
       "inputs": ["default", "^default"]
     },
+    "version": {
+      "executor": "@jscutlery/semver:version",
+      "options": {
+        "preset": "conventional",
+        "noVerify": true,
+        "commitMessageFormat": "chore(project-version): bump ${projectName} to ${version} [skip ci]"
+      }
+    },
     "lint": {
       "inputs": ["linting"],
       "executor": "@nx/linter:eslint",
