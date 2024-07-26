@@ -9,6 +9,9 @@
     "url": "https://github.com/carrot-foundation/middle-earth.git",
     "directory": "packages/carrot-eslint"
   },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com/"
+  },
   "type": "commonjs",
   "main": "./src/index.js",
   "typings": "./src/index.d.ts"

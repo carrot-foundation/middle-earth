@@ -1,14 +1,17 @@
+const name = 'carrot-eslint';
+const sourceRoot = 'libs/publishale/carrot-eslint';
+
 module.exports = {
   branches: ['main'],
-  commitPaths: ['libs/publishale/carrot-eslint/*'],
+  commitPaths: [`${sourceRoot}/*`],
   extends: '../../../release.config.base.js',
-  pkgRoot: 'dist/carrot-eslint',
+  pkgRoot: `dist/${name}`,
   plugins: [
     '@semantic-release/release-notes-generator',
     [
       '@semantic-release/changelog',
       {
-        changeLogFile: 'libs/publishable/carrot-eslint/CHANGELOG.md',
+        changeLogFile: `${sourceRoot}/CHANGELOG.md`,
       },
     ],
     '@semantic-release/npm',

@@ -1,5 +1,5 @@
 {
-  "name": "mithril-forge-template",
+  "name": "middle-earth",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -79,6 +79,6 @@
   },
   "dependencies": {
     "prettier": "3.2.5",
-    "tslib": "^2.3.0"
+    "tslib": "2.3.0"
   }
 }
