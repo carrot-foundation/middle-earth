@@ -8,8 +8,10 @@ on:
 jobs:
   release:
     permissions:
-      packages: write
-      contents: read
+      contents: write
+      issues: write
+      pull-requests: write
+      id-token: write
     name: Release
     runs-on: ubuntu-latest
 
