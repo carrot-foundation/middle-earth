@@ -4,7 +4,7 @@ const sourceRoot = 'libs/publishale/carrot-eslint';
 module.exports = {
   branches: ['main'],
   commitPaths: [`${sourceRoot}/*`],
-  extends: '../../../release.config.base.js',
+  extends: 'semantic-release-npm-github-publish',
   pkgRoot: `dist/${name}`,
   plugins: [
     '@semantic-release/release-notes-generator',

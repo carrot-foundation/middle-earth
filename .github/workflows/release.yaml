@@ -7,6 +7,9 @@ on:
 
 jobs:
   release:
+    permissions:
+      packages: write
+      contents: read
     name: Release
     runs-on: ubuntu-latest
 
