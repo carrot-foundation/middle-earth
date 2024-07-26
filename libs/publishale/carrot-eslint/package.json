@@ -7,7 +7,7 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/carrot-foundation/middle-earth.git",
-    "directory": "packages/carrot-eslint"
+    "directory": "libs/publishale/carrot-eslint"
   },
   "publishConfig": {
     "registry": "https://registry.npmjs.org/"

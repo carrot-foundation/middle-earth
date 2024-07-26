@@ -111,6 +111,7 @@ export const test = {
         'sonarjs/no-duplicate-string': 'off',
         'unicorn/no-useless-undefined': 'off',
         'unicorn/prefer-module': 'off',
+        'unicorn/prefer-top-level-await': 'off',
       },
     },
     {
