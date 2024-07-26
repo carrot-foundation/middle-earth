@@ -18,7 +18,10 @@ module.exports = {
     '@semantic-release/npm',
     '@semantic-release/github',
     '@semantic-release/commit-analyzer',
-    '@semantic-release/release-notes-generator',
+    [
+      '@semantic-release/release-notes-generator',
+      { preset: 'conventionalcommits' },
+    ],
     [
       '@semantic-release/changelog',
       {
@@ -29,8 +32,7 @@ module.exports = {
       '@semantic-release/git',
       {
         assets: [`libs/**/package.json`, `package.json`, `CHANGELOG.md`],
-        message:
-          'chore(release): -v${nextRelease.version} [skip ci]\n\n${nextRelease.notes}',
+        message: 'chore(release): ${nextRelease.version} [skip ci]',
       },
     ],
   ],
