@@ -1,3 +1,15 @@
+## [1.0.1](https://github.com/carrot-foundation/middle-earth/compare/v1.0.0...v1.0.1) (2024-07-26)
+
+
+### chore
+
+* **project-version:** bump $carrot-eslint to 0.1.0 [skip ci] ([20fb181](https://github.com/carrot-foundation/middle-earth/commit/20fb181fe600cf2edf6d4b8416d18163a1d7d7a7))
+
+
+### ci
+
+* create publish workflow ([50767a2](https://github.com/carrot-foundation/middle-earth/commit/50767a2fa7ef75b1b747aeacf769044ba1eb695c))
+
 ## 1.0.0 (2024-07-26)
 
 
