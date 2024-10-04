@@ -21,7 +21,6 @@ export const test = {
         curly: ['error', 'all'],
         'eslint-comments/disable-enable-pair': 'off',
         'import/prefer-default-export': 'off',
-        'no-console': 'warn',
         'no-void': 'off',
         'padding-line-between-statements': [
           'warn',
