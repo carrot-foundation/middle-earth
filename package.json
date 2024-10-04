@@ -17,6 +17,7 @@
     "pkgJsonLint": "npmPkgJsonLint .",
     "prepare": "husky"
   },
+  "private": true,
   "license": "ISC",
   "devDependencies": {
     "@commitlint/cli": "18.6.0",
