@@ -2,6 +2,8 @@
 
 This file was generated using [@jscutlery/semver](https://github.com/jscutlery/semver).
 
+## [0.1.1](https://github.com/carrot-foundation/middle-earth/compare/eslint-config-carrot-0.1.0...eslint-config-carrot-0.1.1) (2024-10-04)
+
 ## 0.1.0 (2024-10-04)
 
 
