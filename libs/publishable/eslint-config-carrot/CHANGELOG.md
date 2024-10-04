@@ -2,6 +2,13 @@
 
 This file was generated using [@jscutlery/semver](https://github.com/jscutlery/semver).
 
+## [0.3.0](https://github.com/carrot-foundation/middle-earth/compare/eslint-config-carrot-0.2.0...eslint-config-carrot-0.3.0) (2024-10-04)
+
+
+### Features
+
+* remove no-console rule ([b9c26dd](https://github.com/carrot-foundation/middle-earth/commit/b9c26ddf4cd78e3361cbbf1f1682edf77f7115a8))
+
 ## [0.2.0](https://github.com/carrot-foundation/middle-earth/compare/eslint-config-carrot-0.1.0...eslint-config-carrot-0.2.0) (2024-10-04)
 
 
