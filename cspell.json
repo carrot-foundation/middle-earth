@@ -2,12 +2,7 @@
   "$schema": "https://raw.githubusercontent.com/streetsidesoftware/cspell/main/cspell.schema.json",
   "version": "0.2",
   "language": "en",
-  "words": [
-    "airbnb",
-    "sonarjs",
-    "fbca",
-    "nrwl"
-  ],
+  "words": ["airbnb", "sonarjs", "fbca", "nrwl"],
   "dictionaries": [
     "companies",
     "cpp",
@@ -37,7 +32,8 @@
     "commitlint.config.js",
     "cspell.json",
     ".gitignore",
-    "CHANGELOG.md"
+    "CHANGELOG.md",
+    ".npmrc"
   ],
   "allowCompoundWords": true,
   "useGitignore": true,
