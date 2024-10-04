@@ -24,7 +24,7 @@ export default {
         'i18n-text/no-en': 'off',
         'import/prefer-default-export': 'off',
         'no-await-in-loop': 'off',
-        // 'no-console': 'warn',
+        'no-console': 'warn',
         'no-underscore-dangle': 'off',
         'no-void': 'off',
         'padding-line-between-statements': [
