@@ -1,3 +1,11 @@
+## [1.0.3](https://github.com/carrot-foundation/middle-earth/compare/v1.0.2...v1.0.3) (2024-10-04)
+
+
+### chore
+
+* **deps:** update dependency renovate to v37.199.0 [security] ([3920627](https://github.com/carrot-foundation/middle-earth/commit/39206272578a985cd0c4b2f89798ece1010d7fe3))
+* **deps:** update dependency renovate to v37.199.0 [security] ([41a9407](https://github.com/carrot-foundation/middle-earth/commit/41a9407ef95f8113a0098468c1797981ac0029c3))
+
 ## [1.0.2](https://github.com/carrot-foundation/middle-earth/compare/v1.0.1...v1.0.2) (2024-07-26)
 
 
