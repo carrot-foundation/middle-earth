@@ -1,3 +1,10 @@
+## [1.0.8](https://github.com/carrot-foundation/middle-earth/compare/v1.0.7...v1.0.8) (2024-10-04)
+
+
+### Bug Fixes
+
+* action publish and release config ([acecb3b](https://github.com/carrot-foundation/middle-earth/commit/acecb3b82c6b12b651d024c04dee518342185d2b))
+
 ## [1.0.7](https://github.com/carrot-foundation/middle-earth/compare/v1.0.6...v1.0.7) (2024-10-04)
 
 
