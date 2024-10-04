@@ -1,3 +1,11 @@
+## [1.0.4](https://github.com/carrot-foundation/middle-earth/compare/v1.0.3...v1.0.4) (2024-10-04)
+
+
+### chore
+
+* **config:** migrate config renovate.json ([504ee53](https://github.com/carrot-foundation/middle-earth/commit/504ee53ebe2a6d10fb34f4aeb63f189f25c6b0ec))
+* **config:** migrate renovate config ([5c39305](https://github.com/carrot-foundation/middle-earth/commit/5c393051bea2f51b6afe931bc3ea4106cca156fc))
+
 ## [1.0.3](https://github.com/carrot-foundation/middle-earth/compare/v1.0.2...v1.0.3) (2024-10-04)
 
 
