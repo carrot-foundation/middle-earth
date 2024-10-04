@@ -1,6 +1,6 @@
 {
   "name": "@carrot-foundation/middle-earth",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "",
   "main": "index.js",
   "packageManager": "pnpm@8.15.1",
