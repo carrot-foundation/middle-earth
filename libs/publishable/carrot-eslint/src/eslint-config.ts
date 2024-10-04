@@ -1,37 +1,38 @@
-export const test = {
+export default {
   extends: [
     'airbnb-base',
     'eslint:recommended',
     'plugin:eslint-comments/recommended',
     'plugin:github/recommended',
     'plugin:perfectionist/recommended-natural',
-    'plugin:promise/recommended',
     'plugin:prettier/recommended',
+    'plugin:promise/recommended',
     'plugin:security/recommended-legacy',
-    'plugin:sonarjs/recommended',
+    'plugin:sonarjs/recommended-legacy',
     'plugin:unicorn/recommended',
   ],
   ignorePatterns: ['**/*'],
   overrides: [
     {
-      files: ['*.ts', '*.tsx', '*.js', '*.jsx'],
+      files: ['*.ts', '*.tsx', '*.js', '*.jsx', '*.mjs'],
       rules: {
         'arrow-body-style': ['warn', 'as-needed'],
         'class-methods-use-this': 'off',
         curly: ['error', 'all'],
         'eslint-comments/disable-enable-pair': 'off',
+        'github/no-then': 'off',
+        'i18n-text/no-en': 'off',
         'import/prefer-default-export': 'off',
+        'no-await-in-loop': 'off',
+        'no-console': 'warn',
+        'no-underscore-dangle': 'off',
         'no-void': 'off',
         'padding-line-between-statements': [
           'warn',
           { blankLine: 'always', next: 'block-like', prev: '*' },
           { blankLine: 'any', next: 'case', prev: 'case' },
           { blankLine: 'always', next: 'return', prev: '*' },
-          {
-            blankLine: 'always',
-            next: '*',
-            prev: ['const', 'let', 'var'],
-          },
+          { blankLine: 'always', next: '*', prev: ['const', 'let', 'var'] },
           {
             blankLine: 'any',
             next: ['const', 'let', 'var'],
@@ -57,6 +58,7 @@ export const test = {
     {
       extends: [
         'airbnb-typescript/base',
+        'plugin:@nx/typescript',
         'plugin:@typescript-eslint/recommended',
         'plugin:@typescript-eslint/recommended-requiring-type-checking',
       ],
@@ -69,6 +71,7 @@ export const test = {
           },
         ],
         '@typescript-eslint/no-unnecessary-condition': 'error',
+        '@typescript-eslint/no-unsafe-enum-comparison': 'off',
         '@typescript-eslint/no-useless-template-literals': 'error',
         '@typescript-eslint/strict-boolean-expressions': [
           'error',
@@ -80,6 +83,16 @@ export const test = {
       },
     },
     {
+      extends: ['plugin:@nx/javascript'],
+      files: ['*.js', '*.jsx', '*.mjs'],
+    },
+    {
+      files: ['*.js'],
+      rules: {
+        'import/no-commonjs': 'off',
+      },
+    },
+    {
       env: {
         jest: true,
       },
@@ -87,37 +100,39 @@ export const test = {
         'plugin:jest-formatting/recommended',
         'plugin:jest/recommended',
       ],
-      files: ['*.spec.ts', '*.spec.tsx', '*.spec.js', '*.spec.jsx'],
+      files: ['*.spec.ts', '*.spec.tsx', '*.spec.js', '*.spec.jsx', '*.mjs'],
       plugins: ['jest-formatting', 'jest-async'],
       rules: {
         '@typescript-eslint/consistent-type-assertions': 'off',
         '@typescript-eslint/dot-notation': 'off',
         '@typescript-eslint/no-explicit-any': 'off',
         '@typescript-eslint/no-non-null-assertion': 'off',
+        '@typescript-eslint/no-unsafe-argument': 'off',
         '@typescript-eslint/no-unsafe-assignment': 'off',
+        '@typescript-eslint/no-unsafe-call': 'off',
+        '@typescript-eslint/no-unsafe-member-access': 'off',
+        '@typescript-eslint/no-unsafe-return': 'off',
         '@typescript-eslint/no-var-requires': 'off',
         '@typescript-eslint/unbound-method': 'off',
         'global-require': 'off',
+        'import/no-namespace': 'off',
         'jest/expect-expect': [
           'error',
           { assertFunctionNames: ['expect', 'expectRequest'] },
         ],
         'jest-async/expect-return': 'error',
-        'no-await-in-loop': 'off',
         'no-restricted-syntax': 'off',
         'security/detect-object-injection': 'off',
         'sonarjs/cognitive-complexity': 'off',
         'sonarjs/no-duplicate-string': 'off',
+        'sonarjs/no-identical-functions': 'off',
         'unicorn/no-useless-undefined': 'off',
         'unicorn/prefer-module': 'off',
-        'unicorn/prefer-top-level-await': 'off',
       },
     },
     {
-      files: ['**/__tests__/*.ts'],
-      rules: {
-        'max-classes-per-file': 'off',
-      },
+      files: ['*.ts'],
+      processor: '@graphql-eslint/graphql',
     },
     {
       extends: ['plugin:yml/standard', 'plugin:yml/prettier'],
@@ -130,11 +145,6 @@ export const test = {
       parser: 'jsonc-eslint-parser',
     },
   ],
-  plugins: ['github', 'perfectionist', 'promise'],
+  plugins: ['@nx', 'github', 'perfectionist', 'promise', 'sonarjs'],
   root: true,
-  rules: {
-    'eol-last': ['error', 'always'],
-    'filenames/match-regex': ['error', '^[a-z]+(-[a-z]+)*(.[a-z]+)+$'],
-    'no-restricted-syntax': 'off',
-  },
 };
