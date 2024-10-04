@@ -31,18 +31,12 @@
     "verbatimModuleSyntax": true,
     "target": "es2015",
     "module": "esnext",
-    "lib": [
-      "es2020",
-      "dom"
-    ],
+    "lib": ["es2020", "dom"],
     "paths": {
-      "@middle-earth/libs/publishable/carrot-eslint": [
-        "libs/publishable/carrot-eslint/src/index.ts"
+      "@middle-earth/libs/publishable/eslint-config-carrot": [
+        "libs/publishable/eslint-config-carrot/src/index.ts"
       ]
     }
   },
-  "exclude": [
-    "node_modules",
-    "tmp"
-  ]
+  "exclude": ["node_modules", "tmp"]
 }

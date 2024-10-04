@@ -1,13 +1,13 @@
 {
-  "name": "@carrot.foundation/carrot-eslint",
-  "version": "0.3.1",
+  "name": "@carrot.foundation/eslint-config-carrot",
+  "version": "0.0.1",
   "dependencies": {
     "@swc/helpers": "~0.5.2"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/carrot-foundation/middle-earth.git",
-    "directory": "libs/publishale/carrot-eslint"
+    "directory": "libs/publishable/eslint-config-carrot"
   },
   "publishConfig": {
     "registry": "https://registry.npmjs.org/"

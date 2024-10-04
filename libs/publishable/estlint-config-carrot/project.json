@@ -1,7 +1,7 @@
 {
-  "name": "carrot-eslint",
+  "name": "eslint-config-carrot",
   "$schema": "../../../node_modules/nx/schemas/project-schema.json",
-  "sourceRoot": "carrot-eslint/src",
+  "sourceRoot": "eslint-config-carrot/src",
   "projectType": "library",
   "targets": {
     "build": {},
