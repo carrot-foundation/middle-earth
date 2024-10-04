@@ -1,3 +1,12 @@
+## [1.0.6](https://github.com/carrot-foundation/middle-earth/compare/v1.0.5...v1.0.6) (2024-10-04)
+
+
+### chore
+
+* **project-version:** bump $carrot-eslint to 0.1.1 [skip ci] ([a63be25](https://github.com/carrot-foundation/middle-earth/commit/a63be2551b48b506888a0bcc7427456f8ca939fe))
+* **project-version:** bump $carrot-eslint to 0.1.1 [skip ci] ([89ad020](https://github.com/carrot-foundation/middle-earth/commit/89ad0209af2afed19ffc0540502d92aff44c62ad))
+* remove no-console rule ([edeab66](https://github.com/carrot-foundation/middle-earth/commit/edeab66aa431ce136ec82d7593e2f8780e5e1fb5))
+
 ## [1.0.5](https://github.com/carrot-foundation/middle-earth/compare/v1.0.4...v1.0.5) (2024-10-04)
 
 
