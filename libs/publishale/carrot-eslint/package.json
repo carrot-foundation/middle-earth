@@ -1,12 +1,12 @@
 {
   "name": "@carrot.foundation/carrot-eslint",
-  "version": "0.1.0",
+  "version": "0.0.0",
   "dependencies": {
     "@swc/helpers": "~0.5.2"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/carrot-foundation/middle-earth.git",
+    "url": "git+https://github.com/carrot-foundation/middle-earth.git",
     "directory": "libs/publishale/carrot-eslint"
   },
   "publishConfig": {
