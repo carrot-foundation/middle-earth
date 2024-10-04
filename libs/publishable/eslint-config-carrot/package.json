@@ -9,6 +9,7 @@
     "url": "git+https://github.com/carrot-foundation/middle-earth.git",
     "directory": "libs/publishable/estlint-config-carrot"
   },
+  "private": false,
   "publishConfig": {
     "registry": "https://registry.npmjs.org/"
   },
