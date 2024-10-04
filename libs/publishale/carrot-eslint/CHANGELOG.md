@@ -2,6 +2,13 @@
 
 This file was generated using [@jscutlery/semver](https://github.com/jscutlery/semver).
 
+## [0.1.1](https://github.com/carrot-foundation/middle-earth/compare/carrot-eslint-0.1.0...carrot-eslint-0.1.1) (2024-10-04)
+
+
+### Bug Fixes
+
+* fix repository url ([67c7a82](https://github.com/carrot-foundation/middle-earth/commit/67c7a824fbe409877c2e693749a64ef5f67d600d))
+
 ## 0.1.0 (2024-10-04)
 
 
