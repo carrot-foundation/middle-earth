@@ -4,6 +4,8 @@ This file was generated using [@jscutlery/semver](https://github.com/jscutlery/s
 
 ## [0.1.1](https://github.com/carrot-foundation/middle-earth/compare/carrot-eslint-0.1.0...carrot-eslint-0.1.1) (2024-10-04)
 
+## [0.1.1](https://github.com/carrot-foundation/middle-earth/compare/carrot-eslint-0.1.0...carrot-eslint-0.1.1) (2024-10-04)
+
 
 ### Bug Fixes
 
