@@ -38,7 +38,7 @@
         "outputPath": "dist/{projectName}",
         "main": "{projectRoot}/src/index.ts",
         "tsConfig": "{projectRoot}/tsconfig.library.json",
-        "assets": ["{projectRoot}/carrot-eslint/*.md"]
+        "assets": ["{projectRoot}/*.md"]
       }
     },
     "publish": {
