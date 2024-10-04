@@ -1,3 +1,15 @@
+## [1.0.5](https://github.com/carrot-foundation/middle-earth/compare/v1.0.4...v1.0.5) (2024-10-04)
+
+
+### chore
+
+* **project-version:** bump $carrot-eslint to 0.1.0 [skip ci] ([f2ab659](https://github.com/carrot-foundation/middle-earth/commit/f2ab65904291debda3d1cb2e32d43c51b766cd8f))
+
+
+### fix
+
+* fix repository url ([67c7a82](https://github.com/carrot-foundation/middle-earth/commit/67c7a824fbe409877c2e693749a64ef5f67d600d))
+
 ## [1.0.4](https://github.com/carrot-foundation/middle-earth/compare/v1.0.3...v1.0.4) (2024-10-04)
 
 
