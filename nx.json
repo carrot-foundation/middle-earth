@@ -31,6 +31,12 @@
         "commitMessageFormat": "chore(project-version): bump ${projectName} to ${version} [skip ci]"
       }
     },
+    "types": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc -b {projectRoot}/tsconfig.types.json"
+      }
+    },
     "build": {
       "executor": "@nx/js:swc",
       "outputs": ["{options.outputPath}"],
@@ -38,11 +44,23 @@
         "outputPath": "dist/{projectName}",
         "main": "{projectRoot}/src/index.ts",
         "tsConfig": "{projectRoot}/tsconfig.library.json",
-        "assets": ["{projectRoot}/*.md"]
+        "assets": ["{projectRoot}/*.md"],
+        "generatePackageJson": true
+      }
+    },
+    "package": {
+      "executor": "nx:run-commands",
+      "outputs": ["{workspaceRoot}/dist/{projectName}"],
+      "options": {
+        "commands": [
+          "nx run {projectName}:build",
+          "nx run {projectName}:types"
+        ],
+        "parallel": false
       }
     },
     "publish": {
-      "dependsOn": ["build"],
+      "dependsOn": ["package"],
       "executor": "nx:run-commands",
       "options": {
         "command": "npm publish ./dist/{projectName}"

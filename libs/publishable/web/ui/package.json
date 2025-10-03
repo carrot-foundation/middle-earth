@@ -10,7 +10,6 @@
     "registry": "https://registry.npmjs.org/",
     "access": "public"
   },
-  "type": "module",
   "main": "./src/index.js",
   "types": "./src/index.d.ts",
   "exports": {
@@ -24,6 +23,7 @@
     "@middle-earth/libs/publishable/web/logger": "workspace:*",
     "@mui/lab": "^7.0.1-beta.18",
     "@mui/material": "^7.3.4",
+    "next": "^15.5.4",
     "react": "^19.2.0",
     "react-share": "^5.2.2",
     "react-social-icons": "^6.25.0",

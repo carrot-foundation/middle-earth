@@ -51,13 +51,13 @@ export const BORDER = (
 ) => {
   const borderValue = String(
     defaultTo(
-      getObjectNestedValueFromPath(borderOptions, value.split('.')),
+      getObjectNestedValueFromPath(borderOptions, String(value).split('.')),
       borderOptions.default,
     ),
   );
   const borderColor = String(
     defaultTo(
-      getObjectNestedValueFromPath(COLORS.STROKE, color.split('.')),
+      getObjectNestedValueFromPath(COLORS.STROKE, String(color).split('.')),
       '',
     ),
   );
