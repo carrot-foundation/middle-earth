@@ -20,7 +20,7 @@
     }
   },
   "dependencies": {
-    "@middle-earth/libs/publishable/web/logger": "workspace:*",
+    "@carrot-test/logger": "workspace:*",
     "@mui/lab": "^7.0.1-beta.18",
     "@mui/material": "^7.3.4",
     "next": "^15.5.4",
