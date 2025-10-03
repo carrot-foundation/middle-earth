@@ -1,0 +1,13 @@
+{
+  "name": "publishable-web-ui",
+  "$schema": "../../../../node_modules/nx/schemas/project-schema.json",
+  "tags": ["type:lib", "stack:web"],
+  "sourceRoot": "libs/publishable/web/ui/src",
+  "projectType": "library",
+  "targets": {
+    "build": {},
+    "lint": {},
+    "version": {},
+    "publish": {}
+  }
+}

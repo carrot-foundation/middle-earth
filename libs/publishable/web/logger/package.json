@@ -1,0 +1,26 @@
+{
+  "name": "@carrot-test/web/logger",
+  "version": "0.1.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/carrot-foundation/middle-earth.git",
+    "directory": "libs/publishable/web/logger"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
+  },
+  "type": "module",
+  "main": "./src/index.js",
+  "types": "./src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "import": "./src/index.js",
+      "default": "./src/index.js"
+    }
+  },
+  "dependencies": {
+    "pino": "^9.5.0"
+  }
+}
