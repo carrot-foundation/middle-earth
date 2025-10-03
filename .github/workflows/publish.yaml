@@ -23,9 +23,12 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
+      - name: Setup NPM Authentication
+        run: |
+          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TEST_TOKEN }}" > ~/.npmrc
+
       - name: Publish Libs to NPM
         run: |
           pnpm nx affected --target=publish --parallel=1
         env:
           GITHUB_TOKEN: ${{ secrets.ADMIN_GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TEST_TOKEN }}
