@@ -2,6 +2,13 @@
 
 This file was generated using [@jscutlery/semver](https://github.com/jscutlery/semver).
 
+## [0.5.0](https://github.com/carrot-foundation/middle-earth/compare/eslint-config-carrot-0.4.1...eslint-config-carrot-0.5.0) (2025-10-03)
+
+
+### Features
+
+* add package command to build with types ([38ad367](https://github.com/carrot-foundation/middle-earth/commit/38ad367d5704646bae676a607e5b1d8a1a30727d))
+
 ## [0.4.1](https://github.com/carrot-foundation/middle-earth/compare/eslint-config-carrot-0.4.0...eslint-config-carrot-0.4.1) (2025-10-03)
 
 ## [0.4.0](https://github.com/carrot-foundation/middle-earth/compare/eslint-config-carrot-0.3.0...eslint-config-carrot-0.4.0) (2024-10-04)
