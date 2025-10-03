@@ -20,7 +20,7 @@
     }
   },
   "dependencies": {
-    "@carrot-test/logger": "workspace:*",
+    "@carrot-test/web-logger": "workspace:*",
     "@mui/lab": "^7.0.1-beta.18",
     "@mui/material": "^7.3.4",
     "next": "^15.5.4",
