@@ -1,0 +1,13 @@
+{
+  "name": "publishable-web-logger",
+  "$schema": "../../../../node_modules/nx/schemas/project-schema.json",
+  "tags": ["type:lib", "stack:web"],
+  "sourceRoot": "libs/publishable/web/logger/src",
+  "projectType": "library",
+  "targets": {
+    "build": {},
+    "lint": {},
+    "version": {},
+    "publish": {}
+  }
+}

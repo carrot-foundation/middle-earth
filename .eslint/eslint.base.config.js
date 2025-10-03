@@ -1,32 +1,32 @@
-const path = require('path');
+const baseConfig = require('../eslint.config.js');
 
-function createBaseEslintConfig({ projectPath, overrides = [] }) {
-  return {
-    extends: [path.join(__dirname, '../.eslintrc.js')],
-    ignorePatterns: ['!**/*', 'src/generated/'],
-    overrides: [
-      {
-        files: ['*.ts', '*.tsx', '*.js', '*.jsx'],
-        rules: {
-          'import/no-extraneous-dependencies': [
-            'error',
-            { packageDir: `${process.cwd()}` },
-          ],
-        },
+const packageDir = require.resolve('../package.json');
+
+function getBaseEslintConfig({ projectPath, overrides = [] }) {
+  return [
+    ...baseConfig,
+    // '!**/*' pattern is required to run ESLint on all files using Nx to compensate the lint-staged config pattern '**/*' on the root config
+    { ignores: ['!**/*', '**/generated/*'] },
+    {
+      files: ['**/*.ts', '**/*.tsx', '**/*.js', '**/*.jsx', '**/*.mjs'],
+      rules: {
+        'import/no-extraneous-dependencies': [
+          'error',
+          { packageDir: `${packageDir.split('/').slice(0, -1).join('/')}` },
+        ],
       },
-      {
-        files: ['*.ts', '*.tsx'],
+    },
+    {
+      files: ['**/*.ts', '**/*.tsx'],
+      languageOptions: {
         parserOptions: {
-          project: `${projectPath}/tsconfig.lint.json`,
+          project: `${projectPath}/tsconfig.eslint.json`,
           ecmaVersion: 2023,
           lib: ['es2022'],
         },
       },
-      ...overrides,
-    ],
-  };
+    },
+    ...overrides,
+  ];
 }
-
-module.exports = {
-  createBaseEslintConfig,
-};
+module.exports = { getBaseEslintConfig };
