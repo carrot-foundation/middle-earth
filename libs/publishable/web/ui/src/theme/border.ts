@@ -44,7 +44,7 @@ export function getObjectNestedValueFromPath(
     return null;
   }, initialValue);
 }
-
+console.log('test');
 export const BORDER = (
   value: Paths<BorderOptions>,
   color: NonNullable<Paths<Stroke>>,
