@@ -10,7 +10,7 @@
 - Cohesion-first: one responsibility per module.
 - Organize by file type:
   - `*.constants.ts`: constants and enums
-  - `*.types.ts`: types and interfaces (use `type-fest` utilities and `@smaug/shared/types` when helpful)
+  - `*.types.ts`: types and interfaces (use `type-fest` utilities and `@project-name/shared/types` when helpful)
   - `*.helpers.ts`: pure functions/utilities
   - `*.dtos.ts`: DTOs if needed (NestJS)
 - Use barrels (`src/index.ts`) for library exports; no deep imports.
