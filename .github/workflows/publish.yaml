@@ -2,7 +2,7 @@ name: Publish
 
 on:
   workflow_run:
-    workflows: ["Release"]
+    workflows: ['Release']
     types: [completed]
 
 jobs:
@@ -28,4 +28,4 @@ jobs:
           pnpm nx affected --target=publish --parallel=1
         env:
           GITHUB_TOKEN: ${{ secrets.ADMIN_GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TEST_TOKEN }}
