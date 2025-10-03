@@ -2,6 +2,13 @@
 
 This file was generated using [@jscutlery/semver](https://github.com/jscutlery/semver).
 
+## [0.2.1](https://github.com/carrot-foundation/middle-earth/compare/publishable-web-ui-0.2.0...publishable-web-ui-0.2.1) (2025-10-03)
+
+
+### Bug Fixes
+
+* change correct dependency name ([4170ed1](https://github.com/carrot-foundation/middle-earth/commit/4170ed1e7312d796e2e383d3ce6779888a961575))
+
 ## [0.2.0](https://github.com/carrot-foundation/middle-earth/compare/publishable-web-ui-0.1.0...publishable-web-ui-0.2.0) (2025-10-03)
 
 
