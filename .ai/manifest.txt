@@ -1,0 +1,5 @@
+instructions.md
+code-styles.md
+commit.md
+pull_request.md
+typescript.md
