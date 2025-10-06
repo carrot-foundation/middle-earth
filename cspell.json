@@ -2,7 +2,16 @@
   "$schema": "https://raw.githubusercontent.com/streetsidesoftware/cspell/main/cspell.schema.json",
   "version": "0.2",
   "language": "en",
-  "words": ["airbnb", "sonarjs", "fbca", "nrwl", "npmjs", "remeda"],
+  "words": [
+    "airbnb",
+    "sonarjs",
+    "fbca",
+    "nrwl",
+    "npmjs",
+    "dtos",
+    "typia",
+    "remeda"
+  ],
   "dictionaries": [
     "companies",
     "cpp",
