@@ -118,6 +118,46 @@ fix/smart-contracts-prevent-overflow
 CARROT-123/feat/app-implement-auth-flow
 ```
 
+## ClickUp Task Management Guidelines
+
+**Reference**: `.ai/clickup-task-creation.md`
+
+### Core Principles
+- **Question everything**: Challenge assumptions, suggest improvements, prevent poorly-scoped work
+- **Be concise**: Provide necessary context without being text-heavy
+- **Be practical**: Include code snippets and specific implementation hints when helpful
+- **Be ruthless with scope**: Aggressively suggest breaking down large tasks
+- **Remove noise**: Delete optional sections that don't add value
+
+### Task Metadata Requirements
+- **Category**: Feature | Bug | Tech. Debt | Spike | Other
+- **Scope**: Back | Front | Infra | Web3 | Other
+- **Priority**: Low | Normal | High | Urgent
+- **Effort (Fibonacci)**: 1 (≤1 day) | 2 (1-2 days) | 3 (2-3 days) | 5 (3-5 days)
+
+### Task Template Structure
+- **TL;DR**: Single sentence with context (max 25 words) - remove if redundant
+- **Context**: Why this exists, background - remove if not adding value
+- **Business Rules**: Specific constraints or requirements as checklist
+- **Value Delivery**: Why, Value, For whom (always required)
+- **Implementation Suggestions**: Architecture hints, code snippets, gotchas - remove if not specific
+- **References**: Direct links to resources - remove if none provided
+- **Definition of Done**: Specific, testable completion criteria as checklist (always required)
+
+### Workflow Approach
+1. **Context Gathering**: Ask about problem, affected component, beneficiaries, expected effort
+2. **Critical Analysis**: Challenge scope, urgency, clarity, and approach
+3. **Task Creation**: Use active criticism, question vague requirements
+4. **DoD Creation**: Match checklist to task type (Feature/Bug/Tech. Debt/Spike)
+5. **Template Optimization**: Remove sections that don't add value
+
+### Assistant Execution Rules
+- Always set Category and Scope using custom fields, not tags
+- Use emojis consistently in titles when appropriate
+- Return task link after creation for user review
+- Provide follow-up instructions: review description, remove blank lines, add sprint points, verify formatting
+- Use `@{ClickUp}` MCP when performing these tasks
+
 ## Important Reminders
 
 1. **Project-Specific Overrides**: Always check for project-specific guidelines that may supersede these general standards
@@ -142,6 +182,7 @@ CARROT-123/feat/app-implement-auth-flow
 - `.ai/typescript.md` - Full TypeScript-specific standards  
 - `.ai/commit.md` - Detailed commit message specifications
 - `.ai/pull_request.md` - Complete PR workflow and template requirements
+- `.ai/clickup-task-creation.md` - Complete click task creation guideline
 
 This ensures you have the most current and complete guidance for each specific task.
 
