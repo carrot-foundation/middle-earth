@@ -10,7 +10,9 @@
     "npmjs",
     "dtos",
     "typia",
-    "remeda"
+    "remeda",
+    "clickup",
+    "IPFS"
   ],
   "dictionaries": [
     "companies",

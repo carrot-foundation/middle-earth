@@ -1,5 +1,6 @@
-instructions.md
+clickup-task-creation.md
 code-styles.md
 commit.md
+instructions.md
 pull_request.md
 typescript.md
