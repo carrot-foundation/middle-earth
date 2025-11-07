@@ -1,6 +1,6 @@
 {
   "name": "@carrot-foundation/eslint-config-carrot",
-  "version": "0.3.0",
+  "version": "0.3.2",
   "dependencies": {
     "@swc/helpers": "~0.5.2"
   },
