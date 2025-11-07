@@ -1,0 +1,16 @@
+{
+  "extends": "./tsconfig.library.json",
+  "compilerOptions": {
+    "composite": true,
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "declarationMap": false,
+    "noEmit": false,
+    "skipLibCheck": true,
+    "rootDir": "src",
+    "outDir": "../../../dist/publishable-eslint-config-carrot",
+    "tsBuildInfoFile": "../../../tmp/publishable-eslint-config-carrot/tsconfig.types.tsbuildinfo"
+  },
+  "include": ["src/**/*"],
+  "exclude": ["**/*.spec.ts", "**/*.test.ts", "dist", "node_modules"]
+}
