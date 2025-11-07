@@ -1,5 +1,5 @@
 {
-  "name": "@carrot-test/web-ui",
+  "name": "@carrot-foundation/web-ui",
   "version": "0.2.1",
   "repository": {
     "type": "git",
@@ -20,7 +20,7 @@
     }
   },
   "dependencies": {
-    "@carrot-test/web-logger": "workspace:*",
+    "@carrot-foundation/web-logger": "workspace:*",
     "@mui/lab": "^7.0.1-beta.18",
     "@mui/material": "^7.3.4",
     "next": "^15.5.4",

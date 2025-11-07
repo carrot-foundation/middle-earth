@@ -25,7 +25,7 @@ jobs:
 
       - name: Setup NPM Authentication
         run: |
-          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TEST_TOKEN }}" > ~/.npmrc
+          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
 
       - name: Publish Libs to NPM
         run: |
