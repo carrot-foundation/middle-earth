@@ -2,6 +2,22 @@
 
 This file was generated using [@jscutlery/semver](https://github.com/jscutlery/semver).
 
+## 0.1.0 (2025-11-07)
+
+
+### Features
+
+* add no-console rule ([ab4bd32](https://github.com/carrot-foundation/middle-earth/commit/ab4bd3274bc376572a39e53132b7d6737c63cd8a))
+* add package command to build with types ([38ad367](https://github.com/carrot-foundation/middle-earth/commit/38ad367d5704646bae676a607e5b1d8a1a30727d))
+* remove no-console rule ([9391b7b](https://github.com/carrot-foundation/middle-earth/commit/9391b7bbef4969f98a179f53348c2bb8c861a69d))
+* remove no-console rule ([b9c26dd](https://github.com/carrot-foundation/middle-earth/commit/b9c26ddf4cd78e3361cbbf1f1682edf77f7115a8))
+
+
+### Bug Fixes
+
+* add correct config to eslint-config-carrot ([3ef4daf](https://github.com/carrot-foundation/middle-earth/commit/3ef4daf6e93e618cc5093281cbd80dd453a3d5f2))
+* add correct infos to publish in carrot npm ([96b4cd8](https://github.com/carrot-foundation/middle-earth/commit/96b4cd8b373581f2188686e58db74f0012bfc004))
+
 ## [0.5.1](https://github.com/carrot-foundation/middle-earth/compare/eslint-config-carrot-0.5.0...eslint-config-carrot-0.5.1) (2025-11-07)
 
 
