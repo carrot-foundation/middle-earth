@@ -1,13 +1,15 @@
 {
-  "name": "eslint-config-carrot",
+  "name": "publishable-eslint-config-carrot",
   "$schema": "../../../node_modules/nx/schemas/project-schema.json",
-  "sourceRoot": "eslint-config-carrot/src",
+  "sourceRoot": "libs/publishable/eslint-config-carrot/src",
   "projectType": "library",
   "targets": {
     "build": {},
     "lint": {},
     "version": {},
-    "publish": {}
+    "publish": {},
+    "types": {},
+    "package": {}
   },
   "tags": []
 }
