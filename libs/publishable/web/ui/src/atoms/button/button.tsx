@@ -4,10 +4,10 @@ import type { ButtonProps } from '@mui/material';
 
 import { forwardRef } from 'react';
 
-import { MuiButton } from './styles';
-console.log('force-publish');
+import { MuiButton as MButton } from './styles';
+
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  (props, reference) => <MuiButton {...props} ref={reference} />,
+  (props, reference) => <MButton {...props} ref={reference} />,
 );
 
 Button.displayName = 'Button';

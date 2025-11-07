@@ -53,6 +53,7 @@
       "outputs": ["{workspaceRoot}/dist/{projectName}"],
       "options": {
         "commands": [
+          "rm -f tmp/{projectName}/tsconfig.types.tsbuildinfo",
           "nx run {projectName}:build",
           "nx run {projectName}:types"
         ],
