@@ -9,7 +9,7 @@ export default {
     'plugin:promise/recommended',
     'plugin:security/recommended-legacy',
     'plugin:sonarjs/recommended-legacy',
-    // 'plugin:unicorn/recommended',
+    'plugin:unicorn/recommended',
   ],
   ignorePatterns: ['**/*'],
   overrides: [
