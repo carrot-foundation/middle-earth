@@ -2,6 +2,13 @@
 
 This file was generated using [@jscutlery/semver](https://github.com/jscutlery/semver).
 
+## [0.7.0](https://github.com/carrot-foundation/middle-earth/compare/publishable-eslint-config-carrot-0.6.0...publishable-eslint-config-carrot-0.7.0) (2025-11-07)
+
+
+### Features
+
+* add baseCommit in publish command ([689a343](https://github.com/carrot-foundation/middle-earth/commit/689a3436ce727daf41c66772b4fe5a1814e914ef))
+
 ## [0.6.0](https://github.com/carrot-foundation/middle-earth/compare/publishable-eslint-config-carrot-0.5.0...publishable-eslint-config-carrot-0.6.0) (2025-11-07)
 
 
