@@ -10,13 +10,15 @@
     "registry": "https://registry.npmjs.org/",
     "access": "public"
   },
-  "main": "./src/index.js",
-  "types": "./src/index.d.ts",
+  "type": "module",
+  "main": "./index.js",
+  "module": "./index.js",
+  "types": "./index.d.ts",
   "exports": {
     ".": {
-      "types": "./src/index.d.ts",
-      "import": "./src/index.js",
-      "default": "./src/index.js"
+      "types": "./index.d.ts",
+      "import": "./index.js",
+      "default": "./index.js"
     }
   },
   "dependencies": {
