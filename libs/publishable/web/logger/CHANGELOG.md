@@ -2,6 +2,13 @@
 
 This file was generated using [@jscutlery/semver](https://github.com/jscutlery/semver).
 
+## [0.2.2](https://github.com/carrot-foundation/middle-earth/compare/publishable-web-logger-0.2.1...publishable-web-logger-0.2.2) (2025-11-07)
+
+
+### Bug Fixes
+
+* force publish ([a0f62d2](https://github.com/carrot-foundation/middle-earth/commit/a0f62d2299d758c553ffa4321a59c1003800d12a))
+
 ## [0.2.1](https://github.com/carrot-foundation/middle-earth/compare/publishable-web-logger-0.2.0...publishable-web-logger-0.2.1) (2025-11-07)
 
 
