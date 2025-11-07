@@ -2,6 +2,13 @@
 
 This file was generated using [@jscutlery/semver](https://github.com/jscutlery/semver).
 
+## [0.4.0](https://github.com/carrot-foundation/middle-earth/compare/publishable-web-ui-0.3.0...publishable-web-ui-0.4.0) (2025-11-07)
+
+
+### Features
+
+* add readme for libs ([47db8c5](https://github.com/carrot-foundation/middle-earth/commit/47db8c56430fbdcdc980b060410253cac7b68ea6))
+
 ## [0.3.0](https://github.com/carrot-foundation/middle-earth/compare/publishable-web-ui-0.2.3...publishable-web-ui-0.3.0) (2025-11-07)
 
 
