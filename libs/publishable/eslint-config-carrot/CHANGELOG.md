@@ -2,6 +2,13 @@
 
 This file was generated using [@jscutlery/semver](https://github.com/jscutlery/semver).
 
+## [0.2.0](https://github.com/carrot-foundation/middle-earth/compare/publishable-eslint-config-carrot-0.1.0...publishable-eslint-config-carrot-0.2.0) (2025-11-07)
+
+
+### Features
+
+* update eslint-config-carrot version ([f0c5f19](https://github.com/carrot-foundation/middle-earth/commit/f0c5f190418027fa4af744348800958b47c70c48))
+
 ## 0.1.0 (2025-11-07)
 
 
