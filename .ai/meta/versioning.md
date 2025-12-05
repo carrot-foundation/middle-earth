@@ -68,18 +68,19 @@ Increment when:
 
 ## Automated Versioning
 
-**Version updates are automated** via `scripts/version-ai-rules.js` and Husky post-commit hook.
+**Version updates are automated** via `standard-version` library, `scripts/version-ai-rules.js` wrapper, and Husky post-commit hook.
 
 ### How It Works
 
 1. **Automatic execution**: After each commit, the script checks if `.ai/` files were changed
 2. **Commit analysis**: Parses the commit message to determine version bump type
-3. **Version update**: Updates `manifest.json` and all rule file frontmatter automatically
-4. **Date update**: Updates `lastUpdated` timestamps to current date
+3. **Version update**: Uses `standard-version` to update `manifest.json` version
+4. **Frontmatter sync**: `update-ai-frontmatter-versions.js` runs as prerelease hook to sync all rule file frontmatter
+5. **Date update**: Updates `lastUpdated` timestamps to current date
 
 ### Version Bump Logic
 
-The script uses Conventional Commits to determine bump type:
+The script uses `standard-version` which follows Conventional Commits to determine bump type:
 
 - **BREAKING CHANGE** or `BREAKING:` → Major version (1.0.0 → 2.0.0)
 - **feat** → Minor version (1.0.0 → 1.1.0)
@@ -94,6 +95,17 @@ pnpm version:ai
 # or
 node scripts/version-ai-rules.js
 ```
+
+### Library Used
+
+This implementation uses [`standard-version`](https://github.com/conventional-changelog/standard-version), an open-source library that:
+
+- Follows Semantic Versioning and Conventional Commits
+- Handles version calculation logic
+- Updates JSON files automatically
+- Provides hooks for custom file updates (YAML frontmatter)
+
+Configuration is in `.versionrc.json`.
 
 ### Manual Version Updates
 

@@ -1,0 +1,20 @@
+{
+  "skip": {
+    "bump": false,
+    "changelog": true,
+    "commit": true,
+    "tag": true
+  },
+  "packageFiles": [],
+  "bumpFiles": [
+    {
+      "filename": ".ai/manifest.json",
+      "type": "json"
+    }
+  ],
+  "scripts": {
+    "prerelease": "node scripts/update-ai-frontmatter-versions.js"
+  },
+  "releaseCommitMessageFormat": "chore(config): bump ai rules version to {{currentTag}}"
+}
+
