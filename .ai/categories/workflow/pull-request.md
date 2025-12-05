@@ -1,4 +1,16 @@
-# Carrot Pull Request Style Guide
+---
+title: "Pull Request Guidelines"
+description: "Workflow and standards for creating well-structured pull requests"
+category: "workflow"
+priority: "required"
+appliesTo: ["all"]
+tools: ["cursor", "claude", "copilot", "all"]
+version: "1.0.0"
+lastUpdated: "2025-01-27"
+relatedRules: ["commit.md", "branch-naming.md"]
+---
+
+# Pull Request Guidelines
 
 Guide developers and AI agents in creating well-structured pull requests that follow project conventions and facilitate efficient code review.
 
@@ -201,3 +213,4 @@ gh pr create \
   -B main \
   -F tmp/pull-requests/feat-smart-contracts-certificate-minting.md
 ```
+
