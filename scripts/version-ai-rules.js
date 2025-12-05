@@ -51,6 +51,15 @@ function hasAiFilesChanged() {
   }
 }
 
+// Check if this is a version bump commit (to avoid infinite loops)
+function isVersionBumpCommit(commitMessage) {
+  const message = commitMessage.toLowerCase();
+  return (
+    message.includes('bump') &&
+    (message.includes('version') || message.includes('ai rules'))
+  );
+}
+
 // Determine version bump type from commit message
 function getVersionBumpType(commitMessage) {
   const message = commitMessage.toLowerCase();
@@ -204,6 +213,16 @@ function updateRuleFile(filePath, newVersion) {
 
 // Main execution
 function main() {
+  // Get commit message first to check if it's a version bump
+  const commitMessage = getLastCommitMessage();
+  console.log(`📝 Commit message: ${commitMessage.split('\n')[0]}`);
+
+  // Skip if this is a version bump commit (to avoid infinite loops)
+  if (isVersionBumpCommit(commitMessage)) {
+    console.log('ℹ Version bump commit detected, skipping version update');
+    process.exit(0);
+  }
+
   // Check if .ai/ files were changed
   if (!hasAiFilesChanged()) {
     console.log(
@@ -211,10 +230,6 @@ function main() {
     );
     process.exit(0);
   }
-
-  // Get commit message
-  const commitMessage = getLastCommitMessage();
-  console.log(`📝 Commit message: ${commitMessage.split('\n')[0]}`);
 
   // Determine version bump
   const bumpType = getVersionBumpType(commitMessage);
