@@ -5,7 +5,7 @@ category: "workflow"
 priority: "required"
 appliesTo: ["all"]
 tools: ["cursor", "claude", "copilot", "all"]
-version: '1.0.1'
+version: '1.1.0'
 lastUpdated: '2025-12-05'
 relatedRules: ["commit.md", "branch-naming.md"]
 ---
