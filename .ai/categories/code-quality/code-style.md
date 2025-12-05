@@ -1,4 +1,16 @@
-# Carrot Code Style Guide
+---
+title: 'Code Style Conventions'
+description: 'Workspace TypeScript and JavaScript code style conventions'
+category: 'code-quality'
+priority: 'required'
+appliesTo: ['typescript', 'javascript', 'all']
+tools: ['cursor', 'claude', 'copilot', 'all']
+version: '1.0.0'
+lastUpdated: '2025-01-27'
+relatedRules: ['typescript.md']
+---
+
+# Code Style Conventions
 
 ### Naming & clarity
 

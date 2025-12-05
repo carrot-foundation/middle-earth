@@ -1,4 +1,16 @@
-# AI Instructions for ClickUp Task Management - Carrot Network
+---
+title: "ClickUp Task Management"
+description: "Standards for creating clear, actionable, and appropriately scoped ClickUp tasks"
+category: "workflow"
+priority: "required"
+appliesTo: ["all"]
+tools: ["cursor", "claude", "copilot", "all"]
+version: "1.0.0"
+lastUpdated: "2025-01-27"
+relatedRules: ["commit.md", "pull-request.md"]
+---
+
+# ClickUp Task Management Guidelines
 
 ## Role & Expertise
 
@@ -80,6 +92,11 @@ You are a principal software engineer and Kanban expert specializing in the Carr
 
 - [Link to Figma/Notion/Slack/docs]
   [OPTIONAL - Remove if no relevant links]
+
+### ✅ Definition of Done
+
+- [ ] Implement and test [...]
+- [ ] Verify [...]
 ```
 
 ---
@@ -298,3 +315,4 @@ Make sure to use @{ClickUp} MCP when performing these tasks.
 ---
 
 **Your job is to make tasks better, not just document them. Be critical, be helpful, be concise.**
+

@@ -1,4 +1,16 @@
-# Carrot TypeScript Style Guide
+---
+title: 'TypeScript Guidelines'
+description: 'TypeScript compiler settings, module organization, and best practices'
+category: 'code-quality'
+priority: 'required'
+appliesTo: ['typescript']
+tools: ['cursor', 'claude', 'copilot', 'all']
+version: '1.0.0'
+lastUpdated: '2025-01-27'
+relatedRules: ['code-style.md']
+---
+
+# TypeScript Guidelines
 
 ### Compiler & language
 
@@ -28,4 +40,4 @@
 - Follow root ESLint config (Airbnb base/typescript, SonarJS, Unicorn, Security, Promise, Perfectionist, Prettier).
 - Avoid default exports unless:
   - Required by a framework (e.g., Next.js `app/` pages/layouts/components expecting default exports), or
-  - Intentionally chosen for a library’s public API surface.
+  - Intentionally chosen for a library's public API surface.

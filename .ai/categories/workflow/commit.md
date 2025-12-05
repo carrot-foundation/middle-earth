@@ -1,4 +1,16 @@
-# Carrot Commit Style Guide
+---
+title: "Commit Message Standards"
+description: "Conventional Commits specification for clear, consistent commit messages"
+category: "workflow"
+priority: "required"
+appliesTo: ["all"]
+tools: ["cursor", "claude", "copilot", "all"]
+version: "1.0.0"
+lastUpdated: "2025-01-27"
+relatedRules: ["branch-naming.md", "pull-request.md"]
+---
+
+# Commit Message Standards
 
 This guide defines how to write clear, consistent commit messages using the Conventional Commits specification.
 
@@ -56,3 +68,4 @@ Search for `commitlint.config.js` in the repo for the latest list of scopes.
 10. Prefer more specific scopes when in doubt
 
 Remember: Good commit messages make history readable and debugging easier.
+

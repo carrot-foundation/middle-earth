@@ -1,0 +1,103 @@
+---
+description: Project-specific rules and conventions for the middle-earth monorepo
+---
+
+# Middle Earth Project-Specific Rules
+
+This file contains project-specific rules that override or extend the generic organizational rules in `.ai/categories/`.
+
+## Commit Scopes
+
+The middle-earth monorepo uses the following commit scopes (defined in `.vscode/settings.json`):
+
+- **`config`**: Changes to root-level configuration files (e.g., `nx.json`, `tsconfig.base.json`, `.eslintrc.js`, `commitlint.config.js`)
+- **`lib`**: Changes to libraries in `libs/publishable/` directory
+- **`release`**: Changes related to versioning, releases, or publishing
+
+### Scope Usage
+
+**When to use `config`:**
+- Root configuration files (`.eslintrc.js`, `tsconfig.base.json`, `nx.json`)
+- Build and tooling configuration
+- CI/CD configuration (`.github/workflows/`)
+- Linting and formatting configuration
+
+**When to use `lib`:**
+- Any library in `libs/publishable/` directory
+- Library source code, tests, or documentation
+- Library-specific configuration files
+
+**When to use `release`:**
+- Version bumping
+- Release configuration
+- Publishing workflows
+- CHANGELOG updates for releases
+
+**Examples:**
+```bash
+chore(config): update ESLint rules for TypeScript files
+feat(lib): add Button component to UI library
+chore(release): bump eslint-config-carrot to 0.9.0
+```
+
+## Monorepo Structure
+
+### Library Organization
+
+All publishable libraries are located in `libs/publishable/`:
+
+```
+libs/publishable/
+├── eslint-config-carrot/    # ESLint configuration library
+└── web/
+    ├── logger/              # Logger utility library
+    └── ui/                  # React UI component library
+```
+
+### Path Aliases
+
+TypeScript path aliases use the pattern: `@middle-earth/libs/publishable/{path-to-library}`
+
+**Defined in `tsconfig.base.json`:**
+- `@middle-earth/libs/publishable/eslint-config-carrot`
+- `@middle-earth/libs/publishable/web/logger`
+- `@middle-earth/libs/publishable/web/ui`
+
+**Usage:**
+```typescript
+// ✅ Good - Use path alias
+import { Button } from '@middle-earth/libs/publishable/web/ui';
+
+// ❌ Bad - Don't use relative paths
+import { Button } from '../../libs/publishable/web/ui';
+```
+
+### Library Naming
+
+- **Directory name**: kebab-case (e.g., `eslint-config-carrot`, `web-ui`)
+- **Package name**: `@carrot-foundation/{library-name}` (e.g., `@carrot-foundation/eslint-config-carrot`)
+
+### UI Library Structure
+
+The `web/ui` library follows atomic design:
+- **`atoms/`**: Basic building blocks (Button, Icons)
+- **`molecules/`**: Composed components (Share)
+- **`theme/`**: Theme configuration and providers
+
+## Nx Configuration
+
+Each library has a `project.json` with targets:
+- `build`: Compiles library using SWC
+- `lint`: Runs ESLint
+- `test`: Runs Jest tests
+- `types`: Generates TypeScript declaration files
+- `package`: Builds and packages library
+- `publish`: Publishes to npm
+- `release`: Runs semantic-release
+
+## Important Notes
+
+- **No application code**: This monorepo only contains libraries, not applications
+- **Publishable only**: All libraries in `libs/publishable/` are intended for npm publication
+- **Shared configuration**: Libraries share root-level ESLint, TypeScript, and Prettier configs
+- **Independent versioning**: Each library is versioned independently using semantic-release
