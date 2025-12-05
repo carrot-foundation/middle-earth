@@ -15,7 +15,8 @@
     "lint:affected": "nx affected:lint --fix",
     "lint:all": "nx run-many --target lint --fix",
     "pkgJsonLint": "npmPkgJsonLint .",
-    "prepare": "husky"
+    "prepare": "husky",
+    "version:ai": "node scripts/version-ai-rules.js"
   },
   "private": true,
   "license": "ISC",
