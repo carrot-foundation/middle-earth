@@ -5,7 +5,7 @@ category: 'documentation'
 priority: 'recommended'
 appliesTo: ['markdown']
 tools: ['cursor', 'claude', 'copilot', 'all']
-version: '1.1.0'
+version: '1.1.1'
 lastUpdated: '2025-12-05'
 relatedRules: []
 ---
