@@ -1,0 +1,6 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Run AI rules versioning if .ai/ files were changed
+node scripts/version-ai-rules.js
+

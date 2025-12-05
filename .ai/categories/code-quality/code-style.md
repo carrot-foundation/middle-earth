@@ -5,8 +5,8 @@ category: 'code-quality'
 priority: 'required'
 appliesTo: ['typescript', 'javascript', 'all']
 tools: ['cursor', 'claude', 'copilot', 'all']
-version: '1.0.0'
-lastUpdated: '2025-01-27'
+version: '1.1.1'
+lastUpdated: '2025-12-05'
 relatedRules: ['typescript.md']
 ---
 
