@@ -1,0 +1,63 @@
+---
+description: Reference to Carrot Foundation AI development rules
+---
+
+# Carrot Foundation AI Rules
+
+These rules are located in `.ai/` folder. Always read the actual rule files when working on tasks.
+
+## Quick Reference
+
+- Code Quality: `.ai/categories/code-quality/`
+- Workflow: `.ai/categories/workflow/`
+- Documentation: `.ai/categories/documentation/`
+
+## Usage
+
+When working on a task:
+1. Check `manifest.json` for relevant rules
+2. Read the specific rule file based on task type
+3. Apply rules based on priority (required > recommended > optional)
+
+## Rule Discovery
+
+Start by reading `.ai/manifest.json` to discover all available rules. The manifest provides:
+- Complete list of all rules organized by category
+- File paths for each rule
+- Metadata (priority, appliesTo, tools, version)
+- Related rules for context
+
+## Filtering Rules
+
+Use the `appliesTo` field to determine which rules are relevant:
+- `["typescript", "javascript"]` - Only apply when working with TypeScript/JavaScript
+- `["all"]` - Always apply (e.g., commit messages, PRs)
+- `["markdown"]` - Only apply when working with markdown files
+
+## Priority Levels
+
+- **required**: Always apply these rules when context matches
+- **recommended**: Apply as best practices, but allow flexibility
+- **optional**: Reference when relevant, but not mandatory
+
+## Common Workflows
+
+### Writing TypeScript Code
+1. Read `.ai/categories/code-quality/code-style.md`
+2. Read `.ai/categories/code-quality/typescript.md`
+3. Read `.ai/categories/code-quality/code-comments.md` (recommended)
+
+### Creating a Pull Request
+1. Read `.ai/categories/workflow/pull-request.md`
+2. Read `.ai/categories/workflow/commit.md` (for commit history context)
+3. Read `.ai/categories/workflow/branch-naming.md` (to verify branch name)
+
+### Writing Documentation
+1. Read `.ai/categories/documentation/markdown.md`
+
+## Important Notes
+
+- **Always read the full rule file**, not just summaries in `instructions.md`
+- **Check relatedRules** in frontmatter for complete context
+- **Project Extensions** - Check for project-specific extensions in this same directory (`.cursor/rules/*-project.mdc`)
+- **Rules are generic** - These are organizational standards, project-specific extensions belong in project repos (outside `.ai/` folder)
