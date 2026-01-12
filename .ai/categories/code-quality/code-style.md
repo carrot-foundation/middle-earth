@@ -6,7 +6,7 @@ priority: 'required'
 appliesTo: ['typescript', 'javascript', 'all']
 tools: ['cursor', 'claude', 'copilot', 'all']
 version: '1.1.1'
-lastUpdated: '2025-12-05'
+lastUpdated: '2026-01-12'
 relatedRules: ['typescript.md', 'naming-conventions.md']
 ---
 

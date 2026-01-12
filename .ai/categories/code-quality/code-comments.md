@@ -6,7 +6,7 @@ priority: 'recommended'
 appliesTo: ['typescript', 'javascript']
 tools: ['cursor', 'claude', 'copilot', 'all']
 version: '1.1.1'
-lastUpdated: '2025-12-05'
+lastUpdated: '2026-01-12'
 relatedRules: ['code-style.md']
 ---
 
