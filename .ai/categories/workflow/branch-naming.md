@@ -5,8 +5,8 @@ category: "workflow"
 priority: "required"
 appliesTo: ["all"]
 tools: ["cursor", "claude", "copilot", "all"]
-version: '1.1.1'
-lastUpdated: '2025-12-05'
+version: '1.20.1'
+lastUpdated: '2026-01-12'
 relatedRules: ["commit.md", "pull-request.md"]
 ---
 

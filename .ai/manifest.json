@@ -1,6 +1,6 @@
 {
-  "version": "1.1.1",
-  "lastUpdated": "2025-12-05",
+  "version": "1.20.1",
+  "lastUpdated": "2026-01-12",
   "extensionPatterns": [
     ".cursor/rules/*-project.mdc",
     ".cursor/rules/*-extensions.mdc",
@@ -24,7 +24,7 @@
           "copilot",
           "all"
         ],
-        "version": "1.1.1",
+        "version": "1.20.1",
         "relatedRules": [
           "typescript.md"
         ]
@@ -41,7 +41,7 @@
           "copilot",
           "all"
         ],
-        "version": "1.1.1",
+        "version": "1.20.1",
         "relatedRules": [
           "code-style.md"
         ]
@@ -59,7 +59,7 @@
           "copilot",
           "all"
         ],
-        "version": "1.1.1",
+        "version": "1.20.1",
         "relatedRules": [
           "code-style.md",
           "typescript.md"
@@ -78,9 +78,30 @@
           "copilot",
           "all"
         ],
-        "version": "1.1.1",
+        "version": "1.20.1",
         "relatedRules": [
           "code-style.md"
+        ]
+      },
+      "naming-conventions": {
+        "file": "categories/code-quality/naming-conventions.md",
+        "priority": "required",
+        "appliesTo": [
+          "typescript",
+          "javascript",
+          "solidity",
+          "all"
+        ],
+        "tools": [
+          "cursor",
+          "claude",
+          "copilot",
+          "all"
+        ],
+        "version": "1.20.1",
+        "relatedRules": [
+          "code-style.md",
+          "typescript.md"
         ]
       }
     },
@@ -97,7 +118,7 @@
           "copilot",
           "all"
         ],
-        "version": "1.1.1",
+        "version": "1.20.1",
         "relatedRules": [
           "branch-naming.md",
           "pull-request.md"
@@ -115,7 +136,7 @@
           "copilot",
           "all"
         ],
-        "version": "1.1.1",
+        "version": "1.20.1",
         "relatedRules": [
           "commit.md",
           "branch-naming.md"
@@ -133,7 +154,7 @@
           "copilot",
           "all"
         ],
-        "version": "1.1.1",
+        "version": "1.20.1",
         "relatedRules": [
           "commit.md",
           "pull-request.md"
@@ -151,7 +172,7 @@
           "copilot",
           "all"
         ],
-        "version": "1.1.1",
+        "version": "1.20.1",
         "relatedRules": [
           "commit.md",
           "pull-request.md"
@@ -171,7 +192,7 @@
           "copilot",
           "all"
         ],
-        "version": "1.1.1",
+        "version": "1.20.1",
         "relatedRules": []
       }
     }
