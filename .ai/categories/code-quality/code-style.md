@@ -7,7 +7,7 @@ appliesTo: ['typescript', 'javascript', 'all']
 tools: ['cursor', 'claude', 'copilot', 'all']
 version: '1.1.1'
 lastUpdated: '2025-12-05'
-relatedRules: ['typescript.md']
+relatedRules: ['typescript.md', 'naming-conventions.md']
 ---
 
 # Code Style Conventions
