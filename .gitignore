@@ -132,3 +132,6 @@ dist
 # nx
 .nx
 tmp
+
+# Superpowers specs and plans
+docs/superpowers/
