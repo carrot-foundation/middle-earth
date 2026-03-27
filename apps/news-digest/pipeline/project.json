@@ -1,0 +1,35 @@
+{
+  "name": "news-digest-pipeline",
+  "$schema": "../../../../node_modules/nx/schemas/project-schema.json",
+  "tags": ["app:news-digest", "type:app", "stack:node"],
+  "sourceRoot": "apps/news-digest/pipeline/src",
+  "projectType": "application",
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "inputs": ["{projectRoot}/src/**/*.ts", "^default"],
+      "outputs": ["{workspaceRoot}/dist/apps/news-digest/pipeline"],
+      "options": {
+        "command": "npx esbuild apps/news-digest/pipeline/src/main.ts --bundle --platform=node --target=node22 --outfile=dist/apps/news-digest/pipeline/main.js --format=esm --external:playwright --external:@aws-sdk/*"
+      }
+    },
+    "test": {},
+    "lint": {},
+    "oxlint": {},
+    "docker-build": {
+      "executor": "nx:run-commands",
+      "inputs": ["{projectRoot}/src/**/*.ts", "^default"],
+      "options": {
+        "command": "docker build -f apps/news-digest/pipeline/Dockerfile -t news-digest-pipeline ."
+      }
+    },
+    "docker-push": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["docker-build"],
+      "options": {
+        "command": "bash apps/news-digest/pipeline/scripts/docker-push.sh"
+      }
+    }
+  }
+}

@@ -13,7 +13,9 @@
     "remeda",
     "clickup",
     "IPFS",
-    "versionrc"
+    "versionrc",
+    "tflint",
+    "oxlint"
   ],
   "dictionaries": [
     "companies",
