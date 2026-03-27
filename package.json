@@ -9,6 +9,8 @@
     "pnpm": "10.2.0"
   },
   "scripts": {
+    "ai:check": "node scripts/check-ai-instructions.mjs",
+    "ai:sync": "node scripts/sync-ai-instructions.mjs",
     "commit": "czg",
     "commit-ai": "czg ai",
     "lint": "nx lint",
