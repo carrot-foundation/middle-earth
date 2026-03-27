@@ -18,7 +18,9 @@
     "oxlint",
     "esgnews",
     "dedup",
-    "ADBQGHMDH"
+    "ADBQGHMDH",
+    "slugify",
+    "slugifies"
   ],
   "dictionaries": [
     "companies",
