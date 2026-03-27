@@ -20,7 +20,8 @@
     "dedup",
     "ADBQGHMDH",
     "slugify",
-    "slugifies"
+    "slugifies",
+    "sfid"
   ],
   "dictionaries": [
     "companies",
