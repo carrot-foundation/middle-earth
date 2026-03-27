@@ -15,7 +15,10 @@
     "IPFS",
     "versionrc",
     "tflint",
-    "oxlint"
+    "oxlint",
+    "esgnews",
+    "dedup",
+    "ADBQGHMDH"
   ],
   "dictionaries": [
     "companies",
