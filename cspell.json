@@ -21,7 +21,17 @@
     "ADBQGHMDH",
     "slugify",
     "slugifies",
-    "sfid"
+    "sfid",
+    "pwuser",
+    "esbuild",
+    "esm",
+    "outfile",
+    "Fargate",
+    "fargate",
+    "awsvpc",
+    "awslogs",
+    "jsonencode",
+    "hashicorp"
   ],
   "dictionaries": [
     "companies",
