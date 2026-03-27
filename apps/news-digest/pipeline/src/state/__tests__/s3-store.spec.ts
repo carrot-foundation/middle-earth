@@ -27,7 +27,24 @@ describe('S3Store', () => {
 
   it('loadState parses and returns existing state', async () => {
     const existingState = {
-      processedArticles: [{ url: 'https://example.com', title: 'Test', date: '2026-03-27', author: 'Author', mainTheme: 'Carbon Markets', summary: 'Summary', keyPoints: [], segment: 'Policy & Regulation', markdownFile: 'test.md', notionPageId: null, processedAt: '2026-03-27T10:00:00Z', status: 'markdown-only' }],
+      processedArticles: [{
+        source: 'carbon-pulse',
+        url: 'https://example.com',
+        title: 'Test',
+        date: '2026-03-27',
+        author: 'Author',
+        mainTheme: 'Carbon Markets',
+        categories: '',
+        location: '',
+        summary: 'Summary',
+        keyPoints: [],
+        segment: 'Policy & Regulation',
+        fullContent: '',
+        markdownFile: 'test.md',
+        notionPageId: null,
+        processedAt: '2026-03-27T10:00:00Z',
+        status: 'markdown-only',
+      }],
       themeLastProcessed: { 'Carbon Markets': '2026-03-20' },
     };
     mockSend.mockResolvedValueOnce({

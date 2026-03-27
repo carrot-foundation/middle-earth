@@ -47,5 +47,5 @@ export const processedStateSchema = z.object({
     processedAt: z.string(),
     status: z.enum(['markdown-only', 'notion-created']),
   })),
-  themeLastProcessed: z.record(z.string()),
+  themeLastProcessed: z.record(z.string(), z.string()),
 });
