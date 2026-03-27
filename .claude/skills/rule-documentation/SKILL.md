@@ -1,0 +1,37 @@
+---
+name: rule-documentation
+description: 'Markdown documentation standards'
+---
+
+# Rule documentation
+
+Apply this rule whenever work touches:
+- `**/*.md`
+
+# Documentation standards
+
+## Document structure
+
+- Primary header (`# Title`) as the first line
+- Overview/Description within the first 200 words
+- Proper hierarchy — no skipped header levels (h1 -> h2 -> h3)
+- Sentence case for headers
+
+## Formatting
+
+- Use `-` for unordered lists consistently
+- Always specify language for code blocks
+- Use backticks for inline code
+- Use descriptive link text; avoid "click here"
+- Prefer relative links for internal documentation
+
+## Line length
+
+- Soft limit: 80 characters
+- Hard limit: 120 characters (exceptions for tables, URLs, code)
+
+## File naming
+
+- Use kebab-case for file names
+- `README.md` for directory overviews
+- `CHANGELOG.md` for version history

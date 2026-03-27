@@ -1,0 +1,36 @@
+---
+name: rule-clickup-task
+description: 'ClickUp task creation and refinement standards'
+---
+
+# Rule clickup-task
+
+Apply this rule whenever work touches:
+- `*`
+
+# ClickUp task management
+
+## Task metadata
+
+- **Category**: Feature | Bug | Tech. Debt | Spike | Other
+- **Scope**: Back | Front | Infra | Web3 | Other
+- **Priority**: Low | Normal | High | Urgent
+- **Effort (Fibonacci)**: 1 (<=1 day) | 2 (1-2 days) | 3 (2-3 days) | 5 (3-5 days)
+
+## Template structure
+
+- **TL;DR**: Single sentence with context (max 25 words) — remove if redundant with title
+- **Context**: Why this exists — remove if not adding value
+- **Business Rules**: Specific constraints as checklist
+- **Value Delivery**: Why, Value, For whom (always required)
+- **Implementation Suggestions**: Architecture hints, code snippets — remove if not specific
+- **References**: Direct links — remove if none
+- **Definition of Done**: Specific, testable completion criteria as checklist (always required)
+
+## Challenge points
+
+- 5-pointer? → Split into smaller tasks
+- "Improves X"? → Ask for metrics
+- Urgent without blockers? → Question timeline
+- DoD >8 items? → Reduce scope
+- TL;DR restates title? → Remove

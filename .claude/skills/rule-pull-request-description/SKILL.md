@@ -1,0 +1,33 @@
+---
+name: rule-pull-request-description
+description: 'Pull request description format and content standards'
+---
+
+# Rule pull-request-description
+
+Apply this rule whenever work touches:
+- `*`
+
+# PR description standards (Middle Earth)
+
+## Template requirements
+
+- **Follow** `.github/pull_request_template.md` structure exactly
+- **Remove** sections that do not apply (do not leave empty or "N/A")
+- **Include** specific file paths, commands, and testing instructions
+- **Focus** on user/business value in summary and context
+- **Complete** all checklist items or explain why they do not apply
+- **No placeholders** — all content must be meaningful and specific
+- **Remove all HTML comments** after addressing their content
+
+## Section handling
+
+- **Deployment Notes**: Only include if there are actual deployment considerations. If none, omit the section.
+- **Related Links**: Only include if there are actual links. If none, omit the section.
+- **Checkboxes**: Check completed items, leave unchecked items that need action.
+
+## Comment handling
+
+- Remove all HTML comments (`<!-- -->`) from the final PR description
+- Address comment content before removing
+- Clean, production-ready markdown without development artifacts
