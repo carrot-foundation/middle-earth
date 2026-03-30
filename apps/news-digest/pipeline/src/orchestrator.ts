@@ -10,7 +10,7 @@ import { createNotionPage } from './distribution/notion.js';
 import { createGmailDraft } from './distribution/email.js';
 import { buildEmailHtml } from './distribution/email-template.helpers.js';
 import { THEMES } from './config.constants.js';
-import type { PipelineResult, ProcessedArticle, RawArticle, Secrets } from './types.js';
+import type { PipelineResult, ProcessedArticle, ProcessedState, RawArticle, Secrets } from './types.js';
 
 interface PipelineConfig {
   readonly secrets: Secrets;
@@ -29,7 +29,7 @@ async function distributeExistingArticles(
   today: string,
   errors: string[],
   store: S3Store,
-  state: { processedArticles: readonly ProcessedArticle[]; themeLastProcessed: Readonly<Record<string, string>> },
+  state: ProcessedState,
 ): Promise<PipelineResult> {
   const updatedArticles = [...articles];
 
@@ -98,14 +98,14 @@ async function distributeExistingArticles(
   const result: PipelineResult = {
     steps: [], articlesScraped: articles.length, articlesBySource,
     deduped: 0, claudeProcessed: 0, notionCreated, notionFailed,
-    emailDraftCreated, slackPosted: slackResult.success, errors,
+    emailDraftCreated, slackPosted, errors,
   };
 
   console.log('\n--- Pipeline Summary (re-run) ---');
   console.log(`Existing articles: ${articles.length}`);
   console.log(`Notion: ${notionCreated} created, ${notionFailed} failed`);
   console.log(`Email draft: ${emailDraftCreated ? 'created' : 'failed'}`);
-  console.log(`Slack: ${slackResult.success ? 'posted' : 'failed'}`);
+  console.log(`Slack: ${slackPosted ? 'posted' : 'failed'}`);
   if (errors.length > 0) {
     console.log(`Errors: ${errors.length}`);
     for (const e of errors) console.error(`  - ${e}`);
@@ -156,7 +156,7 @@ export async function runPipeline(config: PipelineConfig): Promise<PipelineResul
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : 'unknown';
     errors.push(`Carbon Pulse scraping failed: ${msg}`);
-    console.error(errors.at(-1));
+    console.error(errors[errors.length - 1]);
   }
 
   // Step 4: Scrape ESG News
@@ -169,7 +169,7 @@ export async function runPipeline(config: PipelineConfig): Promise<PipelineResul
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : 'unknown';
     errors.push(`ESG News scraping failed: ${msg}`);
-    console.error(errors.at(-1));
+    console.error(errors[errors.length - 1]);
   }
 
   const allRaw = [...cpArticles, ...esgArticles];
@@ -286,7 +286,7 @@ export async function runPipeline(config: PipelineConfig): Promise<PipelineResul
   const result: PipelineResult = {
     steps: [], articlesScraped: kept.length, articlesBySource,
     deduped: removed.length, claudeProcessed, notionCreated, notionFailed,
-    emailDraftCreated, slackPosted: slackResult.success, errors,
+    emailDraftCreated, slackPosted, errors,
   };
 
   console.log('\n--- Pipeline Summary ---');
