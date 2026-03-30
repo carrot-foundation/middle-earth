@@ -72,14 +72,23 @@ export async function processArticle(
       return parseFallback(article);
     }
     const text = rawText.replace(/^```(?:json)?\s*/m, '').replace(/```\s*$/m, '').trim();
-    const parsed = JSON.parse(text) as ClaudeResult;
+    const parsed = JSON.parse(text) as Record<string, unknown>;
+    const summary =
+      typeof parsed['summary'] === 'string' && parsed['summary'].trim().length > 0
+        ? parsed['summary']
+        : article.title;
+    const keyPoints = Array.isArray(parsed['keyPoints'])
+      ? parsed['keyPoints'].filter(
+          (point): point is string => typeof point === 'string' && point.trim().length > 0,
+        )
+      : [];
+    const segment =
+      typeof parsed['segment'] === 'string' &&
+      SEGMENTS.includes(parsed['segment'] as (typeof SEGMENTS)[number])
+        ? parsed['segment']
+        : '';
 
-    return {
-      summary: parsed.summary || article.title,
-      keyPoints: Array.isArray(parsed.keyPoints) ? parsed.keyPoints : [],
-      segment: parsed.segment || '',
-      isFallback: false,
-    };
+    return { summary, keyPoints, segment, isFallback: false };
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'unknown error';
     console.error(`Claude API failed for "${article.title}": ${message}`);
