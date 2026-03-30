@@ -82,9 +82,8 @@ export async function scrapeEsgNews(
   processedUrls: ReadonlySet<string>,
   cpTitles: readonly string[],
 ): Promise<RawArticle[]> {
-  let browser: Browser | undefined;
+  const browser = await chromium.launch({ headless: true });
   try {
-    browser = await chromium.launch({ headless: true });
     const page = await browser.newPage();
     const allArticles: RawArticle[] = [];
     for (const theme of themes) {
@@ -94,11 +93,7 @@ export async function scrapeEsgNews(
       console.log(`[ESG News] Found ${articles.length} articles for ${theme.name}`);
     }
     return allArticles;
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'unknown';
-    console.error(`ESG News scraping failed: ${message}`);
-    return [];
   } finally {
-    await browser?.close();
+    await browser.close();
   }
 }

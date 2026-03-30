@@ -16,9 +16,9 @@ async function login(page: Page, username: string, password: string): Promise<bo
   try {
     await page.waitForSelector('a:has-text("Log out")', { timeout: LOGIN_TIMEOUT });
     return true;
-  } catch {
-    console.error('Carbon Pulse login failed — timed out waiting for "Log out" link');
-    return false;
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : 'unknown';
+    throw new Error(`Carbon Pulse login failed: ${msg}`);
   }
 }
 
@@ -89,12 +89,10 @@ export async function scrapeCarbonPulse(
   processedUrls: ReadonlySet<string>,
   credentials: { readonly username: string; readonly password: string },
 ): Promise<RawArticle[]> {
-  let browser: Browser | undefined;
+  const browser = await chromium.launch({ headless: true });
   try {
-    browser = await chromium.launch({ headless: true });
     const page = await browser.newPage();
-    const loggedIn = await login(page, credentials.username, credentials.password);
-    if (!loggedIn) return [];
+    await login(page, credentials.username, credentials.password);
     const allArticles: RawArticle[] = [];
     for (const theme of themes) {
       console.log(`[Carbon Pulse] Searching: ${theme.name}`);
@@ -103,11 +101,7 @@ export async function scrapeCarbonPulse(
       console.log(`[Carbon Pulse] Found ${articles.length} articles for ${theme.name}`);
     }
     return allArticles;
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'unknown';
-    console.error(`Carbon Pulse scraping failed: ${message}`);
-    return [];
   } finally {
-    await browser?.close();
+    await browser.close();
   }
 }

@@ -22,7 +22,7 @@ describe('S3Store', () => {
     error.name = 'NoSuchKey';
     mockSend.mockRejectedValueOnce(error);
     const state = await store.loadState('state.json');
-    expect(state).toEqual({ processedArticles: [], themeLastProcessed: {} });
+    expect(state).toEqual({ processedArticles: [], themeLastProcessed: {}, slackPostedAt: '' });
   });
 
   it('loadState parses and returns existing state', async () => {
@@ -56,7 +56,7 @@ describe('S3Store', () => {
 
   it('saveState uploads JSON to S3', async () => {
     mockSend.mockResolvedValueOnce({});
-    const state = { processedArticles: [], themeLastProcessed: {} };
+    const state = { processedArticles: [], themeLastProcessed: {}, slackPostedAt: '' };
     await store.saveState('state.json', state);
     expect(mockSend).toHaveBeenCalledOnce();
   });

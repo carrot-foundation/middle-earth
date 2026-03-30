@@ -98,24 +98,29 @@ export async function postSlackDigest(
   channel: string,
   date: string,
 ): Promise<SlackResult> {
-  const blocks = buildSlackBlocks(articles, date);
+  try {
+    const blocks = buildSlackBlocks(articles, date);
 
-  const response = await fetch('https://slack.com/api/chat.postMessage', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ channel, blocks }),
-  });
+    const response = await fetch('https://slack.com/api/chat.postMessage', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ channel, blocks }),
+    });
 
-  const data = (await response.json()) as { ok: boolean; error?: string; ts?: string };
+    const data = (await response.json()) as { ok: boolean; error?: string; ts?: string };
 
-  if (!data.ok) {
-    console.error(`Slack API error: ${data.error}`);
-    return { success: false, error: data.error ?? 'unknown error' };
+    if (!data.ok) {
+      console.error(`Slack API error: ${data.error}`);
+      return { success: false, error: data.error ?? 'unknown error' };
+    }
+
+    console.log(`Slack digest posted. ts: ${data.ts}`);
+    return { success: true };
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : 'unknown';
+    return { success: false, error: msg };
   }
-
-  console.log(`Slack digest posted. ts: ${data.ts}`);
-  return { success: true };
 }

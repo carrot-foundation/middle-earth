@@ -5,6 +5,38 @@ data "aws_subnets" "default" {
   }
 }
 
+data "aws_vpc" "default" {
+  default = true
+}
+
+resource "aws_security_group" "ecs_task" {
+  name        = "${var.app_name}-ecs-task"
+  description = "Allow outbound HTTPS only for news digest pipeline"
+  vpc_id      = data.aws_vpc.default.id
+
+  egress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "HTTPS outbound to external APIs"
+  }
+
+  # DNS resolution
+  egress {
+    from_port   = 53
+    to_port     = 53
+    protocol    = "udp"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "DNS resolution"
+  }
+
+  tags = {
+    Name    = "${var.app_name}-ecs-task"
+    Purpose = "ECS task security group — outbound HTTPS only"
+  }
+}
+
 resource "aws_cloudwatch_event_rule" "daily_trigger" {
   name                = "${var.app_name}-daily-trigger"
   description         = "Triggers news digest pipeline at 7 AM BRT (10 UTC) on weekdays"
@@ -24,6 +56,7 @@ resource "aws_cloudwatch_event_target" "ecs_task" {
 
     network_configuration {
       subnets          = data.aws_subnets.default.ids
+      security_groups  = [aws_security_group.ecs_task.id]
       assign_public_ip = true
     }
   }

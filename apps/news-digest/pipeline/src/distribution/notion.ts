@@ -7,18 +7,20 @@ interface NotionResult {
   readonly error?: string;
 }
 
+const NOTION_TEXT_LIMIT = 2000;
+
 function isValidTheme(theme: string): boolean {
   return (NOTION_VALID_THEMES as readonly string[]).includes(theme);
 }
 
-function buildPageProperties(article: ProcessedArticle, databaseId: string): Record<string, unknown> {
+function buildPageProperties(article: ProcessedArticle): Record<string, unknown> {
   const properties: Record<string, unknown> = {
     Name: {
       title: [{ text: { content: article.title } }],
     },
-    ...(article.segment ? { Segment: { select: { name: article.segment } } } : {}),
+    // Trailing space in 'Source ' is intentional — matches the Notion database column name
     'Source ': {
-      rich_text: [{ text: { content: article.source } }],
+      rich_text: [{ text: { content: article.source === 'carbon-pulse' ? 'Carbon Pulse' : 'ESG News' } }],
     },
     Company: {
       rich_text: [{ text: { content: 'Not Applicable' } }],
@@ -28,31 +30,29 @@ function buildPageProperties(article: ProcessedArticle, databaseId: string): Rec
     },
   };
 
+  if (article.segment) {
+    properties['Segment'] = { select: { name: article.segment } };
+  }
+
   if (isValidTheme(article.mainTheme)) {
     properties['Main Theme'] = {
       multi_select: [{ name: article.mainTheme }],
     };
   }
 
-  return { ...properties, _databaseId: databaseId };
-}
-
-const NOTION_TEXT_LIMIT = 2000;
-
-function textBlock(content: string): unknown {
-  return {
-    object: 'block',
-    type: 'paragraph',
-    paragraph: {
-      rich_text: [{ type: 'text', text: { content: content.slice(0, NOTION_TEXT_LIMIT) } }],
-    },
-  };
+  return properties;
 }
 
 function chunkText(text: string): unknown[] {
   const blocks: unknown[] = [];
   for (let i = 0; i < text.length; i += NOTION_TEXT_LIMIT) {
-    blocks.push(textBlock(text.slice(i, i + NOTION_TEXT_LIMIT)));
+    blocks.push({
+      object: 'block',
+      type: 'paragraph',
+      paragraph: {
+        rich_text: [{ type: 'text', text: { content: text.slice(i, i + NOTION_TEXT_LIMIT) } }],
+      },
+    });
   }
   return blocks;
 }
@@ -61,10 +61,11 @@ function buildPageContent(article: ProcessedArticle): unknown[] {
   const children: unknown[] = [];
 
   if (article.keyPoints.length > 0) {
-    children.push(textBlock(`Key Points:\n${article.keyPoints.map((p) => `• ${p}`).join('\n')}`));
+    const keyPointsText = `Key Points:\n${article.keyPoints.map((p) => `• ${p}`).join('\n')}`;
+    children.push(...chunkText(keyPointsText));
   }
 
-  children.push(textBlock(`Summary:\n${article.summary}`));
+  children.push(...chunkText(`Summary:\n${article.summary}`));
   children.push(...chunkText(article.fullContent));
 
   return children;
@@ -75,30 +76,30 @@ export async function createNotionPage(
   databaseId: string,
   token: string,
 ): Promise<NotionResult> {
-  const properties = buildPageProperties(article, databaseId);
-  const { _databaseId, ...pageProperties } = properties;
+  try {
+    const response = await fetch('https://api.notion.com/v1/pages', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        'Notion-Version': '2022-06-28',
+      },
+      body: JSON.stringify({
+        parent: { database_id: databaseId },
+        properties: buildPageProperties(article),
+        children: buildPageContent(article),
+      }),
+    });
 
-  const body = {
-    parent: { database_id: _databaseId },
-    properties: pageProperties,
-    children: buildPageContent(article),
-  };
+    if (!response.ok) {
+      const errorText = await response.text();
+      return { success: false, error: `HTTP ${response.status}: ${errorText}` };
+    }
 
-  const response = await fetch('https://api.notion.com/v1/pages', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-      'Notion-Version': '2022-06-28',
-    },
-    body: JSON.stringify(body),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    return { success: false, error: `HTTP ${response.status}: ${errorText}` };
+    const data = (await response.json()) as { id: string };
+    return { success: true, pageId: data.id };
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : 'unknown';
+    return { success: false, error: msg };
   }
-
-  const data = (await response.json()) as { id: string };
-  return { success: true, pageId: data.id };
 }

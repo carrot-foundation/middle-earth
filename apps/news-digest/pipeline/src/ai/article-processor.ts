@@ -6,10 +6,11 @@ const MODEL = 'claude-haiku-4-5-20251001';
 const MAX_CONTENT_FOR_PROMPT = 8000;
 const MAX_FALLBACK_SUMMARY = 500;
 
-interface ClaudeResult {
+export interface ClaudeResult {
   readonly summary: string;
   readonly keyPoints: readonly string[];
   readonly segment: string;
+  readonly isFallback: boolean;
 }
 
 export function buildPrompt(article: RawArticle): string {
@@ -35,7 +36,7 @@ Return ONLY valid JSON, no markdown fences, no explanation.`;
 
 function parseFallback(article: RawArticle): ClaudeResult {
   const summary = article.fullContent.slice(0, MAX_FALLBACK_SUMMARY).trimEnd();
-  return { summary: summary || article.title, keyPoints: [], segment: '' };
+  return { summary: summary || article.title, keyPoints: [], segment: '', isFallback: true };
 }
 
 export async function processArticle(
@@ -73,6 +74,7 @@ export async function processArticle(
       summary: parsed.summary || article.title,
       keyPoints: Array.isArray(parsed.keyPoints) ? parsed.keyPoints : [],
       segment: parsed.segment || '',
+      isFallback: false,
     };
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'unknown error';

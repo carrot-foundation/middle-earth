@@ -70,22 +70,27 @@ export async function createGmailDraft(
     return { success: false, error: error instanceof Error ? error.message : String(error) };
   }
 
-  const raw = buildRawEmail(htmlBody, to, date);
+  try {
+    const raw = buildRawEmail(htmlBody, to, date);
 
-  const response = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/drafts', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ message: { raw } }),
-  });
+    const response = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/drafts', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ message: { raw } }),
+    });
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    return { success: false, error: `Gmail API error (HTTP ${response.status}): ${errorText}` };
+    if (!response.ok) {
+      const errorText = await response.text();
+      return { success: false, error: `Gmail API error (HTTP ${response.status}): ${errorText}` };
+    }
+
+    const data = (await response.json()) as { id: string };
+    return { success: true, draftId: data.id };
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : 'unknown';
+    return { success: false, error: msg };
   }
-
-  const data = (await response.json()) as { id: string };
-  return { success: true, draftId: data.id };
 }

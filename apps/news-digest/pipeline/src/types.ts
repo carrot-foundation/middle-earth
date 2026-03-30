@@ -70,6 +70,7 @@ export interface PipelineResult {
   readonly articlesBySource: Readonly<Record<string, number>>;
   readonly deduped: number;
   readonly claudeProcessed: number;
+  readonly claudeFallbacks: number;
   readonly notionCreated: number;
   readonly notionFailed: number;
   readonly emailDraftCreated: boolean;

@@ -23,38 +23,60 @@ interface PipelineConfig {
   readonly gmailTo: string;
 }
 
-async function distributeExistingArticles(
+const AI_CONCURRENCY = 5;
+const NOTION_CONCURRENCY = 3;
+const STATE_RETENTION_DAYS = 90;
+
+// --- Shared distribution logic (DRY) ---
+
+async function distributeArticles(
   articles: ProcessedArticle[],
   config: PipelineConfig,
   today: string,
   errors: string[],
-  store: S3Store,
   state: ProcessedState,
-): Promise<PipelineResult> {
+): Promise<{
+  updatedArticles: ProcessedArticle[];
+  notionCreated: number;
+  notionFailed: number;
+  emailDraftCreated: boolean;
+  slackPosted: boolean;
+}> {
   const updatedArticles = [...articles];
 
-  // Retry Notion for articles that don't have a notionPageId yet
-  console.log('Step 8 (retry): Creating Notion pages for pending articles...');
+  // Notion — parallel with concurrency limit
+  console.log('Creating Notion pages...');
   let notionCreated = 0;
   let notionFailed = 0;
-  for (let i = 0; i < updatedArticles.length; i++) {
-    const article = updatedArticles[i]!;
-    if (article.notionPageId) {
-      notionCreated++;
-      continue;
-    }
-    const result = await createNotionPage(article, config.notionDatabaseId, config.secrets.notionToken);
-    if (result.success && result.pageId) {
-      updatedArticles[i] = { ...article, notionPageId: result.pageId, status: 'notion-created' };
-      notionCreated++;
-    } else {
-      notionFailed++;
-      if (result.error) errors.push(`Notion failed for "${article.title}": ${result.error}`);
+  for (let i = 0; i < updatedArticles.length; i += NOTION_CONCURRENCY) {
+    const batch = updatedArticles.slice(i, i + NOTION_CONCURRENCY);
+    const results = await Promise.allSettled(
+      batch.map((article) => {
+        if (article.notionPageId) return Promise.resolve({ success: true as const, pageId: article.notionPageId });
+        return createNotionPage(article, config.notionDatabaseId, config.secrets.notionToken);
+      }),
+    );
+    for (let j = 0; j < results.length; j++) {
+      const result = results[j]!;
+      const idx = i + j;
+      const article = updatedArticles[idx]!;
+      if (result.status === 'fulfilled' && result.value.success && result.value.pageId) {
+        if (!article.notionPageId) {
+          updatedArticles[idx] = { ...article, notionPageId: result.value.pageId, status: 'notion-created' };
+        }
+        notionCreated++;
+      } else {
+        notionFailed++;
+        const error = result.status === 'rejected'
+          ? (result.reason instanceof Error ? result.reason.message : 'unknown')
+          : (result.value.success ? '' : result.value.error ?? 'unknown');
+        if (error) errors.push(`Notion failed for "${article.title}": ${error}`);
+      }
     }
   }
 
   // Email
-  console.log('Step 9 (retry): Creating Gmail draft...');
+  console.log('Creating Gmail draft...');
   let emailDraftCreated = false;
   try {
     const html = buildEmailHtml(updatedArticles, today);
@@ -69,50 +91,61 @@ async function distributeExistingArticles(
   // Slack — skip if already posted today
   let slackPosted = false;
   if (state.slackPostedAt.startsWith(today)) {
-    console.log('Step 10 (skip): Slack digest already posted today.');
+    console.log('Slack digest already posted today — skipping.');
     slackPosted = true;
   } else {
-    console.log('Step 10 (retry): Posting Slack digest...');
-    const slackResult = await postSlackDigest(updatedArticles, config.secrets.slackToken, config.slackChannelId, today);
-    slackPosted = slackResult.success;
-    if (!slackResult.success) errors.push(`Slack: ${slackResult.error}`);
+    console.log('Posting Slack digest...');
+    try {
+      const slackResult = await postSlackDigest(updatedArticles, config.secrets.slackToken, config.slackChannelId, today);
+      slackPosted = slackResult.success;
+      if (!slackResult.success) errors.push(`Slack: ${slackResult.error}`);
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : 'unknown';
+      errors.push(`Slack post failed: ${msg}`);
+    }
   }
 
-  // Update state with any Notion changes
-  console.log('Step 11 (retry): Saving updated state to S3...');
-  const updatedAllArticles = state.processedArticles.map((a) => {
-    const updated = updatedArticles.find((u) => u.url === a.url);
-    return updated ?? a;
-  });
-  await store.saveState(config.s3StateKey, {
-    processedArticles: updatedAllArticles,
-    themeLastProcessed: state.themeLastProcessed,
-    slackPostedAt: slackPosted ? new Date().toISOString() : state.slackPostedAt,
-  });
-
-  const articlesBySource: Record<string, number> = {};
-  for (const a of articles) {
-    articlesBySource[a.source] = (articlesBySource[a.source] ?? 0) + 1;
-  }
-
-  const result: PipelineResult = {
-    steps: [], articlesScraped: articles.length, articlesBySource,
-    deduped: 0, claudeProcessed: 0, notionCreated, notionFailed,
-    emailDraftCreated, slackPosted, errors,
-  };
-
-  console.log('\n--- Pipeline Summary (re-run) ---');
-  console.log(`Existing articles: ${articles.length}`);
-  console.log(`Notion: ${notionCreated} created, ${notionFailed} failed`);
-  console.log(`Email draft: ${emailDraftCreated ? 'created' : 'failed'}`);
-  console.log(`Slack: ${slackPosted ? 'posted' : 'failed'}`);
-  if (errors.length > 0) {
-    console.log(`Errors: ${errors.length}`);
-    for (const e of errors) console.error(`  - ${e}`);
-  }
-
-  return result;
+  return { updatedArticles, notionCreated, notionFailed, emailDraftCreated, slackPosted };
 }
+
+function pruneOldArticles(articles: readonly ProcessedArticle[]): ProcessedArticle[] {
+  const cutoff = Date.now() - STATE_RETENTION_DAYS * 24 * 60 * 60 * 1000;
+  return articles.filter((a) => new Date(a.processedAt).getTime() >= cutoff) as ProcessedArticle[];
+}
+
+async function saveStateSafely(
+  store: S3Store,
+  key: string,
+  state: ProcessedState,
+  errors: string[],
+): Promise<void> {
+  try {
+    await store.saveState(key, state);
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : 'unknown';
+    errors.push(`CRITICAL: S3 state save failed — next run may produce duplicates: ${msg}`);
+    console.error(errors[errors.length - 1]);
+  }
+}
+
+function logSummary(result: PipelineResult, isRerun: boolean): void {
+  const label = isRerun ? 'Pipeline Summary (re-run)' : 'Pipeline Summary';
+  console.log(`\n--- ${label} ---`);
+  console.log(`Articles: ${result.articlesScraped}`);
+  if (!isRerun) {
+    console.log(`Deduped: ${result.deduped} removed`);
+    console.log(`Claude: ${result.claudeProcessed} processed, ${result.claudeFallbacks} fallbacks`);
+  }
+  console.log(`Notion: ${result.notionCreated} created, ${result.notionFailed} failed`);
+  console.log(`Email draft: ${result.emailDraftCreated ? 'created' : 'failed'}`);
+  console.log(`Slack: ${result.slackPosted ? 'posted' : 'failed'}`);
+  if (result.errors.length > 0) {
+    console.log(`Errors: ${result.errors.length}`);
+    for (const e of result.errors) console.error(`  - ${e}`);
+  }
+}
+
+// --- Main pipeline ---
 
 export async function runPipeline(config: PipelineConfig): Promise<PipelineResult> {
   const today = new Date().toISOString().slice(0, 10);
@@ -124,11 +157,38 @@ export async function runPipeline(config: PipelineConfig): Promise<PipelineResul
   const state = await store.loadState(config.s3StateKey);
   const processedUrls = new Set(state.processedArticles.map((a) => a.url));
 
-  // Check if articles were already extracted today
-  const todayArticles = state.processedArticles.filter((a) => a.processedAt.startsWith(today));
+  // Check if articles were already extracted today — skip to distribution
+  const todayArticles = state.processedArticles.filter(
+    (a): a is ProcessedArticle => a.processedAt.startsWith(today),
+  );
   if (todayArticles.length > 0) {
-    console.log(`Found ${todayArticles.length} articles already extracted today. Skipping scraping, re-running distribution.`);
-    return await distributeExistingArticles(todayArticles as ProcessedArticle[], config, today, errors, store, state);
+    console.log(`Found ${todayArticles.length} articles already extracted today. Skipping scraping.`);
+
+    const dist = await distributeArticles(todayArticles, config, today, errors, state);
+
+    // Merge updated articles back into state
+    const urlMap = new Map(dist.updatedArticles.map((a) => [a.url, a]));
+    const mergedArticles = state.processedArticles.map((a) => urlMap.get(a.url) ?? a);
+
+    await saveStateSafely(store, config.s3StateKey, {
+      processedArticles: pruneOldArticles(mergedArticles),
+      themeLastProcessed: state.themeLastProcessed,
+      slackPostedAt: dist.slackPosted ? new Date().toISOString() : state.slackPostedAt,
+    }, errors);
+
+    const articlesBySource: Record<string, number> = {};
+    for (const a of todayArticles) {
+      articlesBySource[a.source] = (articlesBySource[a.source] ?? 0) + 1;
+    }
+
+    const result: PipelineResult = {
+      steps: [], articlesScraped: todayArticles.length, articlesBySource,
+      deduped: 0, claudeProcessed: 0, claudeFallbacks: 0,
+      notionCreated: dist.notionCreated, notionFailed: dist.notionFailed,
+      emailDraftCreated: dist.emailDraftCreated, slackPosted: dist.slackPosted, errors,
+    };
+    logSummary(result, true);
+    return result;
   }
 
   // Step 2: Determine eligible themes
@@ -137,13 +197,11 @@ export async function runPipeline(config: PipelineConfig): Promise<PipelineResul
   console.log(`Eligible themes: ${eligibleThemes.map((t) => t.name).join(', ')}`);
 
   if (eligibleThemes.length === 0) {
-    console.log('No eligible themes today. Posting empty digest.');
-    const slackResult = await postSlackDigest([], config.secrets.slackToken, config.slackChannelId, today);
+    console.log('No eligible themes today.');
     return {
       steps: [], articlesScraped: 0, articlesBySource: {}, deduped: 0,
-      claudeProcessed: 0, notionCreated: 0, notionFailed: 0,
-      emailDraftCreated: false, slackPosted: slackResult.success,
-      errors: slackResult.success ? [] : [`Slack: ${slackResult.error}`],
+      claudeProcessed: 0, claudeFallbacks: 0, notionCreated: 0, notionFailed: 0,
+      emailDraftCreated: false, slackPosted: false, errors: [],
     };
   }
 
@@ -175,12 +233,11 @@ export async function runPipeline(config: PipelineConfig): Promise<PipelineResul
   const allRaw = [...cpArticles, ...esgArticles];
 
   if (allRaw.length === 0) {
-    console.log('No articles scraped. Posting empty digest.');
-    const slackResult = await postSlackDigest([], config.secrets.slackToken, config.slackChannelId, today);
+    console.log('No articles scraped.');
     return {
       steps: [], articlesScraped: 0, articlesBySource: { 'carbon-pulse': 0, esgnews: 0 },
-      deduped: 0, claudeProcessed: 0, notionCreated: 0, notionFailed: 0,
-      emailDraftCreated: false, slackPosted: slackResult.success, errors,
+      deduped: 0, claudeProcessed: 0, claudeFallbacks: 0, notionCreated: 0, notionFailed: 0,
+      emailDraftCreated: false, slackPosted: false, errors,
     };
   }
 
@@ -189,93 +246,73 @@ export async function runPipeline(config: PipelineConfig): Promise<PipelineResul
   const { kept, removed } = deduplicateArticles(allRaw);
   console.log(`Kept: ${kept.length}, Removed: ${removed.length}`);
 
-  // Step 6: Claude API processing
+  // Step 6: Claude API — parallel with concurrency limit
   console.log('Step 6: Processing articles with Claude API...');
   const processedArticles: ProcessedArticle[] = [];
   let claudeProcessed = 0;
+  let claudeFallbacks = 0;
 
-  for (const raw of kept) {
-    const aiResult = await processArticle(raw, config.secrets.anthropicApiKey);
-    claudeProcessed++;
+  for (let i = 0; i < kept.length; i += AI_CONCURRENCY) {
+    const batch = kept.slice(i, i + AI_CONCURRENCY);
+    const results = await Promise.allSettled(
+      batch.map((raw) => processArticle(raw, config.secrets.anthropicApiKey)),
+    );
 
-    const filename = `${today}-${slugify(raw.title)}.md`;
-    const processed: ProcessedArticle = {
-      ...raw,
-      summary: aiResult.summary,
-      keyPoints: [...aiResult.keyPoints],
-      segment: aiResult.segment,
-      markdownFile: filename,
-      notionPageId: null,
-      processedAt: new Date().toISOString(),
-      status: 'markdown-only',
-    };
-    processedArticles.push(processed);
-  }
+    for (let j = 0; j < results.length; j++) {
+      const raw = batch[j]!;
+      const result = results[j]!;
+      const aiResult = result.status === 'fulfilled'
+        ? result.value
+        : { summary: raw.fullContent.slice(0, 500), keyPoints: [] as string[], segment: '', isFallback: true };
 
-  // Step 7: Save articles to S3
-  console.log('Step 7: Saving articles to S3...');
-  for (const article of processedArticles) {
-    const markdown = buildArticleMarkdown(article);
-    await store.saveArticle(config.s3ArticlesPrefix, article.markdownFile, markdown);
-  }
+      claudeProcessed++;
+      if (aiResult.isFallback) claudeFallbacks++;
 
-  // Step 8: Create Notion pages
-  console.log('Step 8: Creating Notion pages...');
-  let notionCreated = 0;
-  let notionFailed = 0;
-  const updatedArticles = [...processedArticles];
-
-  for (let i = 0; i < updatedArticles.length; i++) {
-    const article = updatedArticles[i]!;
-    const result = await createNotionPage(article, config.notionDatabaseId, config.secrets.notionToken);
-    if (result.success && result.pageId) {
-      updatedArticles[i] = { ...article, notionPageId: result.pageId, status: 'notion-created' };
-      notionCreated++;
-    } else {
-      notionFailed++;
-      if (result.error) errors.push(`Notion failed for "${article.title}": ${result.error}`);
+      const filename = `${today}-${slugify(raw.title)}.md`;
+      processedArticles.push({
+        ...raw,
+        summary: aiResult.summary,
+        keyPoints: [...aiResult.keyPoints],
+        segment: aiResult.segment,
+        markdownFile: filename,
+        notionPageId: null,
+        processedAt: new Date().toISOString(),
+        status: 'markdown-only',
+      });
     }
   }
 
-  // Step 9: Email
-  console.log('Step 9: Creating Gmail draft...');
-  let emailDraftCreated = false;
-  try {
-    const html = buildEmailHtml(updatedArticles, today);
-    const emailResult = await createGmailDraft(html, config.gmailTo, today, config.secrets.gmail);
-    emailDraftCreated = emailResult.success;
-    if (!emailResult.success) errors.push(`Gmail: ${emailResult.error}`);
-  } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : 'unknown';
-    errors.push(`Gmail draft failed: ${msg}`);
+  // Step 7: Save articles to S3 — parallel, individual failures don't crash pipeline
+  console.log('Step 7: Saving articles to S3...');
+  const saveResults = await Promise.allSettled(
+    processedArticles.map((article) => {
+      const markdown = buildArticleMarkdown(article);
+      return store.saveArticle(config.s3ArticlesPrefix, article.markdownFile, markdown);
+    }),
+  );
+  for (let i = 0; i < saveResults.length; i++) {
+    const result = saveResults[i]!;
+    if (result.status === 'rejected') {
+      const msg = result.reason instanceof Error ? result.reason.message : 'unknown';
+      errors.push(`S3 save failed for "${processedArticles[i]!.title}": ${msg}`);
+    }
   }
 
-  // Step 10: Slack
-  let slackPosted = false;
-  if (state.slackPostedAt.startsWith(today)) {
-    console.log('Step 10 (skip): Slack digest already posted today.');
-    slackPosted = true;
-  } else {
-    console.log('Step 10: Posting Slack digest...');
-    const slackResult = await postSlackDigest(
-      updatedArticles, config.secrets.slackToken, config.slackChannelId, today,
-    );
-    slackPosted = slackResult.success;
-    if (!slackResult.success) errors.push(`Slack: ${slackResult.error}`);
-  }
+  // Steps 8-10: Distribute
+  const dist = await distributeArticles(processedArticles, config, today, errors, state);
 
-  // Step 11: Save final state
+  // Step 11: Save final state — protected with error handling
   console.log('Step 11: Saving final state to S3...');
   const updatedThemes = { ...state.themeLastProcessed };
   for (const theme of eligibleThemes) {
     updatedThemes[theme.name] = today;
   }
 
-  await store.saveState(config.s3StateKey, {
-    processedArticles: [...state.processedArticles, ...updatedArticles],
+  await saveStateSafely(store, config.s3StateKey, {
+    processedArticles: pruneOldArticles([...state.processedArticles, ...dist.updatedArticles]),
     themeLastProcessed: updatedThemes,
-    slackPostedAt: slackPosted ? new Date().toISOString() : state.slackPostedAt,
-  });
+    slackPostedAt: dist.slackPosted ? new Date().toISOString() : state.slackPostedAt,
+  }, errors);
 
   // Summary
   const articlesBySource: Record<string, number> = {};
@@ -285,21 +322,10 @@ export async function runPipeline(config: PipelineConfig): Promise<PipelineResul
 
   const result: PipelineResult = {
     steps: [], articlesScraped: kept.length, articlesBySource,
-    deduped: removed.length, claudeProcessed, notionCreated, notionFailed,
-    emailDraftCreated, slackPosted, errors,
+    deduped: removed.length, claudeProcessed, claudeFallbacks,
+    notionCreated: dist.notionCreated, notionFailed: dist.notionFailed,
+    emailDraftCreated: dist.emailDraftCreated, slackPosted: dist.slackPosted, errors,
   };
-
-  console.log('\n--- Pipeline Summary ---');
-  console.log(`Scraped: ${result.articlesScraped} (CP: ${articlesBySource['carbon-pulse'] ?? 0}, ESG: ${articlesBySource['esgnews'] ?? 0})`);
-  console.log(`Deduped: ${result.deduped} removed`);
-  console.log(`Claude processed: ${result.claudeProcessed}`);
-  console.log(`Notion: ${result.notionCreated} created, ${result.notionFailed} failed`);
-  console.log(`Email draft: ${result.emailDraftCreated ? 'created' : 'failed'}`);
-  console.log(`Slack: ${result.slackPosted ? 'posted' : 'failed'}`);
-  if (result.errors.length > 0) {
-    console.log(`Errors: ${result.errors.length}`);
-    for (const e of result.errors) console.error(`  - ${e}`);
-  }
-
+  logSummary(result, false);
   return result;
 }
