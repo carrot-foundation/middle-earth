@@ -21,7 +21,7 @@
       "executor": "nx:run-commands",
       "inputs": ["{projectRoot}/src/**/*.ts", "^default"],
       "options": {
-        "command": "docker build -f apps/news-digest/pipeline/Dockerfile -t news-digest-pipeline ."
+        "command": "docker buildx build --platform linux/amd64 -f apps/news-digest/pipeline/Dockerfile -t news-digest-pipeline ."
       }
     },
     "docker-push": {

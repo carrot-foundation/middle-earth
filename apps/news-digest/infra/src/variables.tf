@@ -31,7 +31,7 @@ variable "slack_channel_id" {
 variable "notion_database_id" {
   description = "Notion database ID"
   type        = string
-  default     = "2a09703d-8e9c-81c4-ba82-000b21a6eb18"
+  default     = "2a09703d-8e9c-8193-b638-f7bb6b1c7cd8"
 }
 
 variable "gmail_to" {

@@ -65,7 +65,8 @@ export async function processArticle(
     const data = (await response.json()) as {
       content: Array<{ type: string; text: string }>;
     };
-    const text = data.content[0]?.text ?? '';
+    const rawText = data.content[0]?.text ?? '';
+    const text = rawText.replace(/^```(?:json)?\s*/m, '').replace(/```\s*$/m, '').trim();
     const parsed = JSON.parse(text) as ClaudeResult;
 
     return {

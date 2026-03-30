@@ -35,7 +35,7 @@ RUN npm install -g pnpm@10
 COPY --from=builder /app/dist/main.js ./main.js
 COPY package.json pnpm-lock.yaml ./
 
-RUN pnpm install --frozen-lockfile --prefer-offline --prod
+RUN pnpm install --frozen-lockfile --prefer-offline --prod --ignore-scripts
 
 RUN npx playwright install chromium
 

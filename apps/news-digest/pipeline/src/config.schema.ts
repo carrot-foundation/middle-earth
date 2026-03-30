@@ -22,7 +22,7 @@ export const envSchema = z.object({
   NOTION_TOKEN_SECRET_ARN: z.string().min(1),
   GMAIL_SECRET_ARN: z.string().min(1),
   SLACK_CHANNEL_ID: z.string().default('C0ADBQGHMDH'),
-  NOTION_DATABASE_ID: z.string().default('2a09703d-8e9c-81c4-ba82-000b21a6eb18'),
+  NOTION_DATABASE_ID: z.string().default('2a09703d-8e9c-8193-b638-f7bb6b1c7cd8'),
   GMAIL_TO: z.string().default('market-intelligence@carrot.eco'),
 });
 
@@ -38,9 +38,9 @@ export const processedStateSchema = z.object({
     mainTheme: z.string(),
     categories: z.string().optional().default(''),
     location: z.string().optional().default(''),
-    summary: z.string(),
-    keyPoints: z.array(z.string()),
-    segment: z.string(),
+    summary: z.string().optional().default(''),
+    keyPoints: z.array(z.string()).optional().default([]),
+    segment: z.string().optional().default(''),
     fullContent: z.string().optional().default(''),
     markdownFile: z.string(),
     notionPageId: z.string().nullable(),
@@ -48,4 +48,5 @@ export const processedStateSchema = z.object({
     status: z.enum(['markdown-only', 'notion-created']),
   })),
   themeLastProcessed: z.record(z.string(), z.string()),
+  slackPostedAt: z.string().optional().default(''),
 });

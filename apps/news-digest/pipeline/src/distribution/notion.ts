@@ -16,9 +16,7 @@ function buildPageProperties(article: ProcessedArticle, databaseId: string): Rec
     Name: {
       title: [{ text: { content: article.title } }],
     },
-    Segment: {
-      select: { name: article.segment },
-    },
+    ...(article.segment ? { Segment: { select: { name: article.segment } } } : {}),
     'Source ': {
       rich_text: [{ text: { content: article.source } }],
     },
@@ -39,34 +37,35 @@ function buildPageProperties(article: ProcessedArticle, databaseId: string): Rec
   return { ...properties, _databaseId: databaseId };
 }
 
+const NOTION_TEXT_LIMIT = 2000;
+
+function textBlock(content: string): unknown {
+  return {
+    object: 'block',
+    type: 'paragraph',
+    paragraph: {
+      rich_text: [{ type: 'text', text: { content: content.slice(0, NOTION_TEXT_LIMIT) } }],
+    },
+  };
+}
+
+function chunkText(text: string): unknown[] {
+  const blocks: unknown[] = [];
+  for (let i = 0; i < text.length; i += NOTION_TEXT_LIMIT) {
+    blocks.push(textBlock(text.slice(i, i + NOTION_TEXT_LIMIT)));
+  }
+  return blocks;
+}
+
 function buildPageContent(article: ProcessedArticle): unknown[] {
   const children: unknown[] = [];
 
   if (article.keyPoints.length > 0) {
-    children.push({
-      object: 'block',
-      type: 'paragraph',
-      paragraph: {
-        rich_text: [{ type: 'text', text: { content: `Key Points:\n${article.keyPoints.map((p) => `• ${p}`).join('\n')}` } }],
-      },
-    });
+    children.push(textBlock(`Key Points:\n${article.keyPoints.map((p) => `• ${p}`).join('\n')}`));
   }
 
-  children.push({
-    object: 'block',
-    type: 'paragraph',
-    paragraph: {
-      rich_text: [{ type: 'text', text: { content: `Summary:\n${article.summary}` } }],
-    },
-  });
-
-  children.push({
-    object: 'block',
-    type: 'paragraph',
-    paragraph: {
-      rich_text: [{ type: 'text', text: { content: article.fullContent } }],
-    },
-  });
+  children.push(textBlock(`Summary:\n${article.summary}`));
+  children.push(...chunkText(article.fullContent));
 
   return children;
 }

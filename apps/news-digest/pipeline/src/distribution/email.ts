@@ -36,6 +36,7 @@ async function refreshAccessToken(credentials: GmailCredentials): Promise<string
 function buildRawEmail(htmlBody: string, to: string, date: string): string {
   const subject = `Industry News Digest - ${date}`;
   const boundary = 'boundary_carrot_digest';
+  const htmlBase64 = Buffer.from(htmlBody, 'utf-8').toString('base64');
 
   const message = [
     `To: ${to}`,
@@ -45,14 +46,14 @@ function buildRawEmail(htmlBody: string, to: string, date: string): string {
     '',
     `--${boundary}`,
     'Content-Type: text/html; charset=UTF-8',
-    'Content-Transfer-Encoding: quoted-printable',
+    'Content-Transfer-Encoding: base64',
     '',
-    htmlBody,
+    htmlBase64,
     '',
     `--${boundary}--`,
   ].join('\r\n');
 
-  return Buffer.from(message).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  return Buffer.from(message).toString('base64url');
 }
 
 export async function createGmailDraft(

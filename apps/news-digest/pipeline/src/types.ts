@@ -32,6 +32,7 @@ export interface ProcessedArticle {
 export interface ProcessedState {
   readonly processedArticles: readonly ProcessedArticle[];
   readonly themeLastProcessed: Readonly<Record<string, string>>;
+  readonly slackPostedAt: string;
 }
 
 export type ThemeFrequency = 'daily' | 'weekly' | 'monthly';
