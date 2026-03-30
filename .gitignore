@@ -138,3 +138,5 @@ tmp
 *.tfstate
 *.tfstate.backup
 .terraform.lock.hcl
+# Superpowers specs and plans
+docs/superpowers/
