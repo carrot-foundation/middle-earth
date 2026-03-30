@@ -5,6 +5,7 @@ import type { ProcessedState } from '../types.js';
 const EMPTY_STATE: ProcessedState = {
   processedArticles: [],
   themeLastProcessed: {},
+  slackPostedAt: '',
 };
 
 export class S3Store {

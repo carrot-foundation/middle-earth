@@ -113,7 +113,7 @@ export async function postSlackDigest(
 
   if (!data.ok) {
     console.error(`Slack API error: ${data.error}`);
-    return { success: false, error: data.error };
+    return { success: false, error: data.error ?? 'unknown error' };
   }
 
   console.log(`Slack digest posted. ts: ${data.ts}`);

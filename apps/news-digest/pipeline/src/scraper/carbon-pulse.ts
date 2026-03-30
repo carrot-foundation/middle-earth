@@ -35,7 +35,7 @@ async function extractArticleContent(page: Page): Promise<{
     let author = '';
     let date = '';
     let categories = '';
-    for (const p of meta) {
+    for (const p of Array.from(meta)) {
       const text = p.textContent ?? '';
       if (text.includes('By ')) author = text.replace('By ', '').trim();
       if (text.match(/\d{1,2}\s\w+\s\d{4}/)) date = text.trim();
