@@ -96,8 +96,9 @@ export async function createNotionPage(
       return { success: false, error: `HTTP ${response.status}: ${errorText}` };
     }
 
-    const data = (await response.json()) as { id: string };
-    return { success: true, pageId: data.id };
+    const data = (await response.json()) as Record<string, unknown>;
+    const pageId = typeof data['id'] === 'string' ? data['id'] : undefined;
+    return { success: true, pageId };
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : 'unknown';
     return { success: false, error: msg };

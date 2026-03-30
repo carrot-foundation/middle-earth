@@ -63,10 +63,14 @@ export async function processArticle(
       return parseFallback(article);
     }
 
-    const data = (await response.json()) as {
-      content: Array<{ type: string; text: string }>;
-    };
-    const rawText = data.content[0]?.text ?? '';
+    const data = (await response.json()) as Record<string, unknown>;
+    const content = Array.isArray(data['content']) ? data['content'] : [];
+    const firstBlock = content[0] as Record<string, unknown> | undefined;
+    const rawText = typeof firstBlock?.['text'] === 'string' ? firstBlock['text'] : '';
+    if (!rawText) {
+      console.error(`Claude API returned empty content for "${article.title}"`);
+      return parseFallback(article);
+    }
     const text = rawText.replace(/^```(?:json)?\s*/m, '').replace(/```\s*$/m, '').trim();
     const parsed = JSON.parse(text) as ClaudeResult;
 

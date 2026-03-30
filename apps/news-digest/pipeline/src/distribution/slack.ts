@@ -21,6 +21,10 @@ interface SlackResult {
 const MAX_SUMMARY_LENGTH = 500;
 const MAX_ARTICLES = 15;
 
+function escapeSlackMrkdwn(text: string): string {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 function sourceLabel(source: ProcessedArticle['source']): string {
   if (source === 'carbon-pulse') return 'Carbon Pulse';
   return 'ESG News';
@@ -71,7 +75,7 @@ export function buildSlackBlocks(articles: readonly ProcessedArticle[], date: st
       type: 'section',
       text: {
         type: 'mrkdwn',
-        text: `*<${url}|${article.title}>*\n:label: ${article.mainTheme}  |  :writing_hand: ${article.author}  |  :newspaper: ${sourceLabel(article.source)}  |  :calendar: ${article.date}`,
+        text: `*<${url}|${escapeSlackMrkdwn(article.title)}>*\n:label: ${escapeSlackMrkdwn(article.mainTheme)}  |  :writing_hand: ${escapeSlackMrkdwn(article.author)}  |  :newspaper: ${sourceLabel(article.source)}  |  :calendar: ${article.date}`,
       },
     });
 

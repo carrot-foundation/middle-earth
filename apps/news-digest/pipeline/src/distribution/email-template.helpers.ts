@@ -1,5 +1,14 @@
 import type { ProcessedArticle } from '../types.js';
 
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 const MAX_SUMMARY_LENGTH = 500;
 const COMPACT_THRESHOLD = 10;
 
@@ -82,7 +91,7 @@ function buildArticleCard(article: ProcessedArticle): string {
             (point) => `
         <tr>
           <td width="20" valign="top" style="padding: 2px 8px 4px 0; color: ${BRAND.orange}; font-size: 8px; line-height: 20px;">&#9679;</td>
-          <td style="padding: 2px 0 4px 0; font-size: 13px; line-height: 20px; color: ${BRAND.mutedText};">${point}</td>
+          <td style="padding: 2px 0 4px 0; font-size: 13px; line-height: 20px; color: ${BRAND.mutedText};">${escapeHtml(point)}</td>
         </tr>`,
           )
           .join('')}
@@ -108,20 +117,20 @@ function buildArticleCard(article: ProcessedArticle): string {
                 <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-bottom: 8px;">
                   <tr>
                     <td style="background: ${color}15; border-radius: 4px; padding: 3px 10px;">
-                      <span style="font-size: 11px; font-weight: 600; color: ${color}; text-transform: uppercase; letter-spacing: 0.5px;">${article.mainTheme}</span>
+                      <span style="font-size: 11px; font-weight: 600; color: ${color}; text-transform: uppercase; letter-spacing: 0.5px;">${escapeHtml(article.mainTheme)}</span>
                     </td>
                   </tr>
                 </table>
                 <!-- Title -->
                 <a href="${url}" style="text-decoration: none; color: ${BRAND.darkNavy};">
-                  <h2 style="margin: 0 0 8px 0; font-size: 17px; font-weight: 700; line-height: 24px; color: ${BRAND.darkNavy};">${article.title}</h2>
+                  <h2 style="margin: 0 0 8px 0; font-size: 17px; font-weight: 700; line-height: 24px; color: ${BRAND.darkNavy};">${escapeHtml(article.title)}</h2>
                 </a>
                 <!-- Meta -->
                 <p style="margin: 0 0 12px 0; font-size: 12px; color: ${BRAND.mutedText}; line-height: 18px;">
-                  ${article.author} &nbsp;&#183;&nbsp; ${article.date} &nbsp;&#183;&nbsp; <a href="${article.url}" style="color: ${BRAND.teal}; text-decoration: none;">${sourceName}</a>
+                  ${escapeHtml(article.author)} &nbsp;&#183;&nbsp; ${article.date} &nbsp;&#183;&nbsp; <a href="${article.url}" style="color: ${BRAND.teal}; text-decoration: none;">${sourceName}</a>
                 </p>
                 <!-- Summary -->
-                <p style="margin: 0; font-size: 14px; line-height: 22px; color: #4A5568;">${summary}</p>
+                <p style="margin: 0; font-size: 14px; line-height: 22px; color: #4A5568;">${escapeHtml(summary)}</p>
                 ${keyPointsHtml}
                 <!-- Read more -->
                 <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-top: 16px;">
@@ -151,9 +160,9 @@ function buildCompactArticleRow(article: ProcessedArticle): string {
           <tr>
             <td width="4" style="background: ${color}; border-radius: 2px; font-size: 1px;">&nbsp;</td>
             <td style="padding-left: 12px;">
-              <a href="${url}" style="text-decoration: none; color: ${BRAND.darkNavy}; font-size: 14px; font-weight: 600; line-height: 20px;">${article.title}</a>
+              <a href="${url}" style="text-decoration: none; color: ${BRAND.darkNavy}; font-size: 14px; font-weight: 600; line-height: 20px;">${escapeHtml(article.title)}</a>
               <p style="margin: 4px 0 0 0; font-size: 12px; color: ${BRAND.mutedText}; line-height: 16px;">
-                ${article.author} &nbsp;&#183;&nbsp; ${article.date} &nbsp;&#183;&nbsp; <span style="color: ${BRAND.teal};">${srcLabel}</span>
+                ${escapeHtml(article.author)} &nbsp;&#183;&nbsp; ${article.date} &nbsp;&#183;&nbsp; <span style="color: ${BRAND.teal};">${srcLabel}</span>
               </p>
             </td>
           </tr>

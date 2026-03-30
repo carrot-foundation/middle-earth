@@ -90,7 +90,7 @@ resource "aws_iam_role_policy" "eventbridge" {
       {
         Effect   = "Allow"
         Action   = ["ecs:RunTask"]
-        Resource = aws_ecs_task_definition.pipeline.arn
+        Resource = "${replace(aws_ecs_task_definition.pipeline.arn, "/:\\d+$/", ":*")}"
       },
       {
         Effect   = "Allow"
