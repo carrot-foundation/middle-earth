@@ -53,7 +53,7 @@ async function searchAndExtract(
   const searchUrl = `${SEARCH_URL}${encodeURIComponent(theme.carbonPulseSearchTerms)}`;
   await page.goto(searchUrl, { waitUntil: 'domcontentloaded' });
   const links = await page.evaluate(() => {
-    const results = document.querySelectorAll('h2.entry-title a');
+    const results = document.querySelectorAll('h2.posttitle a');
     return Array.from(results).map((a) => ({
       url: (a as HTMLAnchorElement).href,
       title: a.textContent?.trim() ?? '',
