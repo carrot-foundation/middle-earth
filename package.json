@@ -101,7 +101,7 @@
     "next": "15.5.4",
     "nx-release": "3.3.0",
     "pino": "10.0.0",
-    "playwright": "1.58.2",
+    "playwright": "1.59.0",
     "prettier": "3.2.5",
     "react": "19.2.0",
     "react-share": "5.2.2",

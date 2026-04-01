@@ -83,11 +83,15 @@ async function searchAndExtract(
       await page.goto(link.url, { waitUntil: 'domcontentloaded' });
       await waitForCloudflare(page);
       const extracted = await extractArticleContent(page);
+      if (!extracted.date) {
+        console.warn(`[Carbon Pulse] Missing publish date, skipping: ${link.url}`);
+        continue;
+      }
       articles.push({
         source: 'carbon-pulse',
         url: link.url,
         title: link.title,
-        date: extracted.date || new Date().toISOString().slice(0, 10),
+        date: extracted.date,
         author: extracted.author || 'Carbon Pulse',
         mainTheme: theme.name,
         categories: extracted.categories,

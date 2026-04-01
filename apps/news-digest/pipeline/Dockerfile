@@ -5,7 +5,7 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 
-RUN npm install -g pnpm@10
+RUN npm install -g pnpm@10.2.0
 
 COPY package.json pnpm-lock.yaml ./
 
@@ -26,13 +26,13 @@ RUN npx esbuild apps/news-digest/pipeline/src/main.ts \
 #########################################
 # ---------- Production Stage -----------
 #########################################
-FROM mcr.microsoft.com/playwright:v1.52.0-noble
+FROM mcr.microsoft.com/playwright:v1.59.0-noble
 
 WORKDIR /app
 
 RUN apt-get update -qq && apt-get install -y -qq xvfb > /dev/null 2>&1 && rm -rf /var/lib/apt/lists/*
 
-RUN npm install -g pnpm@10
+RUN npm install -g pnpm@10.2.0
 
 COPY --from=builder /app/dist/main.js ./main.js
 COPY package.json pnpm-lock.yaml ./
