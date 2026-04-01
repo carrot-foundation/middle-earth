@@ -1,0 +1,35 @@
+{
+  "name": "news-digest-infra",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "tags": ["app:news-digest", "type:app", "stack:terraform"],
+  "sourceRoot": "apps/news-digest/infra/src",
+  "projectType": "application",
+  "targets": {
+    "tf": {
+      "executor": "nx:run-commands",
+      "configurations": {
+        "init": {
+          "command": "terraform -chdir=apps/news-digest/infra/src init"
+        },
+        "plan": {
+          "command": "terraform -chdir=apps/news-digest/infra/src plan"
+        },
+        "apply": {
+          "command": "terraform -chdir=apps/news-digest/infra/src apply"
+        },
+        "validate": {
+          "command": "terraform -chdir=apps/news-digest/infra/src validate"
+        },
+        "fmt": {
+          "command": "terraform fmt -recursive apps/news-digest/infra/src"
+        }
+      }
+    },
+    "tf-lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tflint --chdir=apps/news-digest/infra/src"
+      }
+    }
+  }
+}
