@@ -30,6 +30,8 @@ FROM mcr.microsoft.com/playwright:v1.52.0-noble
 
 WORKDIR /app
 
+RUN apt-get update -qq && apt-get install -y -qq xvfb > /dev/null 2>&1 && rm -rf /var/lib/apt/lists/*
+
 RUN npm install -g pnpm@10
 
 COPY --from=builder /app/dist/main.js ./main.js
@@ -41,4 +43,6 @@ RUN npx playwright install chromium
 
 USER pwuser
 
-ENTRYPOINT ["node", "main.js"]
+ENV DISPLAY=:99
+
+ENTRYPOINT ["sh", "-c", "Xvfb :99 -screen 0 1280x720x24 &>/dev/null & sleep 1 && node main.js"]

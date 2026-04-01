@@ -32,7 +32,10 @@
     "awsvpc",
     "awslogs",
     "jsonencode",
-    "hashicorp"
+    "hashicorp",
+    "xvfb",
+    "Xvfb",
+    "KHTML"
   ],
   "dictionaries": [
     "companies",
