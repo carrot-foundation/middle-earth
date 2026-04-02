@@ -5,6 +5,12 @@ export const carbonPulseSecretSchema = z.object({
   password: z.string().min(1),
 });
 
+export const proxySecretSchema = z.object({
+  server: z.string().min(1),
+  username: z.string().min(1),
+  password: z.string().min(1),
+});
+
 export const gmailSecretSchema = z.object({
   client_id: z.string().min(1),
   client_secret: z.string().min(1),
@@ -21,9 +27,11 @@ export const envSchema = z.object({
   ANTHROPIC_API_KEY_SECRET_ARN: z.string().min(1),
   NOTION_TOKEN_SECRET_ARN: z.string().min(1),
   GMAIL_SECRET_ARN: z.string().min(1),
+  PROXY_SECRET_ARN: z.string().min(1),
   SLACK_CHANNEL_ID: z.string().default('C0ADBQGHMDH'),
   NOTION_DATABASE_ID: z.string().default('2a09703d-8e9c-8193-b638-f7bb6b1c7cd8'),
   GMAIL_TO: z.string().default('market-intelligence@carrot.eco'),
+  DRY_RUN: z.string().default('false'),
 });
 
 export type Env = z.infer<typeof envSchema>;

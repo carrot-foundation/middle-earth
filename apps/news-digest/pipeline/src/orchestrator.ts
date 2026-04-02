@@ -21,6 +21,7 @@ interface PipelineConfig {
   readonly slackChannelId: string;
   readonly notionDatabaseId: string;
   readonly gmailTo: string;
+  readonly dryRun: boolean;
 }
 
 const AI_CONCURRENCY = 5;
@@ -43,6 +44,11 @@ async function distributeArticles(
   slackPosted: boolean;
 }> {
   const updatedArticles = [...articles];
+
+  if (config.dryRun) {
+    console.log('[DRY RUN] Skipping Notion, email, and Slack distribution.');
+    return { updatedArticles, notionCreated: 0, notionFailed: 0, emailDraftCreated: false, slackPosted: false };
+  }
 
   // Notion — parallel with concurrency limit
   console.log('Creating Notion pages...');
@@ -209,7 +215,7 @@ export async function runPipeline(config: PipelineConfig): Promise<PipelineResul
   console.log('Step 3: Scraping Carbon Pulse...');
   let cpArticles: RawArticle[] = [];
   try {
-    cpArticles = await scrapeCarbonPulse(eligibleThemes, processedUrls, config.secrets.carbonPulse);
+    cpArticles = await scrapeCarbonPulse(eligibleThemes, processedUrls, config.secrets.carbonPulse, config.secrets.proxy);
     console.log(`Carbon Pulse: ${cpArticles.length} articles`);
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : 'unknown';

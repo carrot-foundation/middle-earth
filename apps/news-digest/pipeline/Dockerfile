@@ -1,7 +1,7 @@
 #########################################
 # ---------- Build Stage ----------------
 #########################################
-FROM node:22-alpine AS builder
+FROM --platform=linux/amd64 node:22-alpine AS builder
 
 WORKDIR /app
 
@@ -26,7 +26,7 @@ RUN npx esbuild apps/news-digest/pipeline/src/main.ts \
 #########################################
 # ---------- Production Stage -----------
 #########################################
-FROM mcr.microsoft.com/playwright:v1.59.0-noble
+FROM --platform=linux/amd64 mcr.microsoft.com/playwright:v1.59.0-noble
 
 WORKDIR /app
 

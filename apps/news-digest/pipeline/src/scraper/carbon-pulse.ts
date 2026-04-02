@@ -1,6 +1,6 @@
 import { chromium } from 'playwright';
 import type { Page } from 'playwright';
-import type { RawArticle, ThemeConfig } from '../types.js';
+import type { ProxyConfig, RawArticle, ThemeConfig } from '../types.js';
 
 const BASE_URL = 'https://carbon-pulse.com';
 const SEARCH_URL = `${BASE_URL}/?sfid=1438&_sf_s=`;
@@ -21,16 +21,26 @@ async function waitForCloudflare(page: Page): Promise<void> {
 }
 
 async function login(page: Page, username: string, password: string): Promise<boolean> {
+  console.log('[Carbon Pulse] Navigating to login page...');
   await page.goto(LOGIN_URL);
+  console.log(`[Carbon Pulse] Login page loaded. Title: "${await page.title()}", URL: ${page.url()}`);
   await waitForCloudflare(page);
   await page.fill('#username', username);
   await page.fill('#password', password);
+  console.log('[Carbon Pulse] Credentials filled, clicking Login...');
   await page.getByRole('button', { name: 'Login' }).click();
   try {
+    console.log(`[Carbon Pulse] After click — Title: "${await page.title()}", URL: ${page.url()}`);
     await waitForCloudflare(page);
+    console.log(`[Carbon Pulse] After CF wait — Title: "${await page.title()}", URL: ${page.url()}`);
     await page.waitForSelector('a[href*="logout"]', { timeout: LOGIN_TIMEOUT });
     return true;
   } catch (error: unknown) {
+    const title = await page.title().catch(() => 'unknown');
+    const url = page.url();
+    const bodyText = await page.evaluate(() => document.body?.innerText?.slice(0, 500)).catch(() => 'unavailable');
+    console.error(`[Carbon Pulse] Login failed — Title: "${title}", URL: ${url}`);
+    console.error(`[Carbon Pulse] Page content: ${bodyText}`);
     const msg = error instanceof Error ? error.message : 'unknown';
     throw new Error(`Carbon Pulse login failed: ${msg}`);
   }
@@ -110,9 +120,15 @@ export async function scrapeCarbonPulse(
   themes: readonly ThemeConfig[],
   processedUrls: ReadonlySet<string>,
   credentials: { readonly username: string; readonly password: string },
+  proxy: ProxyConfig,
 ): Promise<RawArticle[]> {
   const browser = await chromium.launch({
     headless: false,
+    proxy: {
+      server: proxy.server,
+      username: proxy.username,
+      password: proxy.password,
+    },
     args: ['--disable-blink-features=AutomationControlled', '--no-sandbox'],
   });
   try {
