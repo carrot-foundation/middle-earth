@@ -4,6 +4,7 @@ import type { RawArticle, ThemeConfig } from '../types.js';
 
 const SEARCH_URL = 'https://esgnews.com/?s=';
 const MAX_ARTICLES_PER_THEME = 2;
+const MAX_ARTICLE_AGE_DAYS = 30;
 
 async function extractArticleContent(page: Page): Promise<{
   content: string;
@@ -58,11 +59,17 @@ async function searchAndExtract(
     try {
       await page.goto(link.url, { waitUntil: 'domcontentloaded' });
       const extracted = await extractArticleContent(page);
+      const articleDate = extracted.date || new Date().toISOString().slice(0, 10);
+      const ageMs = Date.now() - new Date(articleDate).getTime();
+      if (ageMs > MAX_ARTICLE_AGE_DAYS * 24 * 60 * 60 * 1000) {
+        console.warn(`[ESG News] Article too old (${articleDate}), skipping: ${link.url}`);
+        continue;
+      }
       articles.push({
         source: 'esgnews',
         url: link.url,
         title: link.title,
-        date: extracted.date || new Date().toISOString().slice(0, 10),
+        date: articleDate,
         author: extracted.author,
         mainTheme: theme.name,
         categories: '',

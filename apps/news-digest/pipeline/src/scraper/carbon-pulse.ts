@@ -6,6 +6,7 @@ const BASE_URL = 'https://carbon-pulse.com';
 const SEARCH_URL = `${BASE_URL}/?sfid=1438&_sf_s=`;
 const LOGIN_URL = `${BASE_URL}/login/`;
 const MAX_ARTICLES_PER_THEME = 3;
+const MAX_ARTICLE_AGE_DAYS = 30;
 const LOGIN_TIMEOUT = 45_000;
 const CF_TIMEOUT = 30_000;
 const REALISTIC_USER_AGENT =
@@ -46,13 +47,21 @@ async function login(page: Page, username: string, password: string): Promise<bo
   }
 }
 
+function parseHumanDate(raw: string): string {
+  const parsed = new Date(raw);
+  if (!Number.isNaN(parsed.getTime())) {
+    return parsed.toISOString().slice(0, 10);
+  }
+  return '';
+}
+
 async function extractArticleContent(page: Page): Promise<{
   content: string;
   author: string;
   date: string;
   categories: string;
 }> {
-  return page.evaluate(() => {
+  const raw = await page.evaluate(() => {
     const entry = document.querySelector('div.entry');
     const content = entry?.textContent?.trim() ?? '';
 
@@ -69,6 +78,8 @@ async function extractArticleContent(page: Page): Promise<{
 
     return { content, author, date, categories };
   });
+
+  return { ...raw, date: parseHumanDate(raw.date) };
 }
 
 async function searchAndExtract(
@@ -95,6 +106,11 @@ async function searchAndExtract(
       const extracted = await extractArticleContent(page);
       if (!extracted.date) {
         console.warn(`[Carbon Pulse] Missing publish date, skipping: ${link.url}`);
+        continue;
+      }
+      const ageMs = Date.now() - new Date(extracted.date).getTime();
+      if (ageMs > MAX_ARTICLE_AGE_DAYS * 24 * 60 * 60 * 1000) {
+        console.warn(`[Carbon Pulse] Article too old (${extracted.date}), skipping: ${link.url}`);
         continue;
       }
       articles.push({
