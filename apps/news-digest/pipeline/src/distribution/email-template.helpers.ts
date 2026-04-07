@@ -23,20 +23,26 @@ const BRAND = {
   cardBg: '#FFFFFF',
 } as const;
 
-const THEME_COLORS: Readonly<Record<string, string>> = {
-  'Methane & Super Pollutants': '#D97706',
-  'Methane Detection & MRV': '#0891B2',
-  'Circularity & Composting': '#059669',
-  'Global Events & COP30': '#7C3AED',
-  'Carbon Markets': '#2563EB',
-  'Corporate Carbon Credit Purchases': '#DC2626',
-  'Tokenized Carbon & Web3': '#9333EA',
-  'Climate Finance & AMC': '#0D9488',
-  'Carrot Mentions': BRAND.orange,
+const THEME_COLORS: Readonly<Record<string, { color: string; bgColor: string }>> = {
+  'Methane & Super Pollutants': { color: '#D97706', bgColor: '#FEF3C7' },
+  'Methane Detection & MRV': { color: '#0891B2', bgColor: '#CFFAFE' },
+  'Circularity & Composting': { color: '#059669', bgColor: '#D1FAE5' },
+  'Global Events & COP30': { color: '#7C3AED', bgColor: '#EDE9FE' },
+  'Carbon Markets': { color: '#2563EB', bgColor: '#DBEAFE' },
+  'Corporate Carbon Credit Purchases': { color: '#DC2626', bgColor: '#FEE2E2' },
+  'Tokenized Carbon & Web3': { color: '#9333EA', bgColor: '#F3E8FF' },
+  'Climate Finance & AMC': { color: '#0D9488', bgColor: '#CCFBF1' },
+  'Carrot Mentions': { color: BRAND.orange, bgColor: '#FFF7ED' },
 };
 
+const DEFAULT_THEME = { color: BRAND.teal, bgColor: '#E6FFFA' } as const;
+
 function themeColor(theme: string): string {
-  return THEME_COLORS[theme] ?? BRAND.teal;
+  return (THEME_COLORS[theme] ?? DEFAULT_THEME).color;
+}
+
+function themeBgColor(theme: string): string {
+  return (THEME_COLORS[theme] ?? DEFAULT_THEME).bgColor;
 }
 
 function sourceLabel(source: string): string {
@@ -68,12 +74,15 @@ function truncateSummary(summary: string): string {
   return summary;
 }
 
-function buildLogoSvg(wordmarkColor: string): string {
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="150" height="49" viewBox=".001 0 148.464 48" aria-label="Carrot">
-  <path d="M23.803 17.468c-.36 0-.66-.25-.741-.583-.736-3.047-2.185-9.013-2.936-12.09a4 4 0 0 1-.133-.997A3.805 3.805 0 0 1 23.803 0a3.805 3.805 0 0 1 3.809 3.798c0 .347-.056.678-.133.996-.751 3.078-2.197 9.044-2.936 12.09a.764.764 0 0 1-.74.584M20.852 18.133a.76.76 0 0 1-.92-.209c-1.98-2.433-5.863-7.196-7.866-9.652a4.2 4.2 0 0 1-.552-.843 3.79 3.79 0 0 1 1.799-5.062 3.81 3.81 0 0 1 5.076 1.793c.148.31.243.634.309.958.651 3.1 1.919 9.105 2.573 12.17a.764.764 0 0 1-.42.845M18.476 20.003a.76.76 0 0 1-.92.206 9411 9411 0 0 0-11.27-5.334A3.79 3.79 0 0 1 4.864 9.01a3.816 3.816 0 0 1 5.356-.56c.268.216.493.468.692.728a6554 6554 0 0 0 7.575 9.881c.212.27.217.66-.01.94zM17.137 22.708a.78.78 0 0 1-.74.604H3.923c-.33 0-.667-.023-1.004-.104a3.79 3.79 0 0 1-2.813-4.576 3.81 3.81 0 0 1 4.59-2.804c.338.081.65.211.94.361 2.826 1.445 8.304 4.242 11.104 5.669a.76.76 0 0 1 .396.853zM30.468 22.708a.784.784 0 0 0 .74.604h12.473c.33 0 .667-.023 1.004-.104a3.797 3.797 0 0 0 2.813-4.578 3.81 3.81 0 0 0-4.59-2.805 4.2 4.2 0 0 0-.94.362 12162 12162 0 0 1-11.104 5.668.77.77 0 0 0-.396.856zM26.753 18.133a.76.76 0 0 0 .92-.209c1.98-2.433 5.863-7.196 7.866-9.652.21-.255.401-.53.552-.843a3.79 3.79 0 0 0-1.799-5.062 3.81 3.81 0 0 0-5.076 1.793c-.148.31-.243.634-.309.958-.651 3.1-1.919 9.105-2.573 12.17a.76.76 0 0 0 .42.845M29.13 20.003a.76.76 0 0 0 .919.206 9411 9411 0 0 1 11.27-5.334 3.79 3.79 0 0 0 1.423-5.864 3.816 3.816 0 0 0-5.356-.56 4.2 4.2 0 0 0-.692.728c-1.926 2.52-5.664 7.395-7.575 9.881a.75.75 0 0 0 .01.94z" fill="${BRAND.teal}"/>
-  <path d="M46.277 24.82H31.16a.303.303 0 0 0-.304.319q.023.472.023.986c0 1.928-.312 4.213-.889 6.644a.3.3 0 0 1-.268.231l-5.945.568a.307.307 0 0 0 0 .612l5.332.51a.3.3 0 0 1 .263.387 49 49 0 0 1-1.142 3.388c-.672 1.773-1.416 3.416-2.095 4.626-1.05 1.872-1.6 2.448-2.333 2.448s-1.282-.576-2.332-2.448a28 28 0 0 1-1.15-2.326.303.303 0 0 1 .248-.425l3.247-.311a.32.32 0 0 0 .291-.273.31.31 0 0 0-.276-.341l-4.057-.387a.31.31 0 0 1-.255-.191l-.143-.372c-1.502-3.974-2.435-7.987-2.616-11.217a.305.305 0 0 1 .247-.318l8.058-1.5a.31.31 0 0 0 .258-.258.303.303 0 0 0-.301-.35H1.325c-.71 0-1.27.602-1.216 1.31C1.044 38.365 11.294 48 23.802 48s22.756-9.635 23.693-21.868a1.22 1.22 0 0 0-1.218-1.307z" fill="${BRAND.orange}"/>
-  <path d="M118.272 16.751c-3.16.158-5.147 1.5-6.366 3.467v-2.57a.605.605 0 0 0-.608-.607h-1.829a.605.605 0 0 0-.608.607v17.616c0 .336.27.606.608.606h1.829c.337 0 .608-.27.608-.606v-7.34c0-5.02 2.511-7.887 6.438-8.134a.605.605 0 0 0 .567-.604V17.36a.61.61 0 0 0-.639-.609M106.699 16.751c-3.16.158-5.148 1.5-6.366 3.467v-2.57a.606.606 0 0 0-.608-.607h-1.83a.605.605 0 0 0-.608.607v17.616c0 .336.271.606.608.606h1.83c.337 0 .608-.27.608-.606v-7.34c0-5.02 2.511-7.887 6.438-8.134a.605.605 0 0 0 .567-.604V17.36a.61.61 0 0 0-.639-.609M147.857 17.042h-3.96V12.18a.605.605 0 0 0-.608-.606h-1.829a.605.605 0 0 0-.608.606v4.86h-2.438a.605.605 0 0 0-.608.607v1.52c0 .337.271.607.608.607h2.438v15.494c0 .336.271.606.608.606h1.829c.337 0 .608-.27.608-.606V19.775h3.96c.337 0 .608-.27.608-.606v-1.521a.605.605 0 0 0-.608-.607M71.622 31.769a6.98 6.98 0 0 1-4.445 1.676c-3.856.061-7.064-3.042-7.118-6.886-.054-3.903 3.104-7.085 7.005-7.085 1.737 0 3.327.63 4.553 1.677.242.206.6.19.825-.034l1.252-1.248a.607.607 0 0 0-.03-.886 9.98 9.98 0 0 0-6.395-2.482c-5.511-.112-10.156 4.392-10.197 9.89-.038 5.536 4.45 10.034 9.992 10.034 2.53 0 4.839-.937 6.602-2.483a.605.605 0 0 0 .028-.887l-1.252-1.248a.604.604 0 0 0-.82-.036zM127.993 16.494c-5.518 0-9.991 4.46-9.991 9.963s4.473 9.963 9.991 9.963c5.519 0 9.992-4.46 9.992-9.963s-4.473-9.963-9.992-9.963m0 16.95c-3.867 0-7.007-3.128-7.007-6.987s3.137-6.988 7.007-6.988c3.871 0 7.008 3.129 7.008 6.988s-3.137 6.988-7.008 6.988M93.632 17.042h-1.83a.605.605 0 0 0-.608.606v1.862c-1.737-1.86-4.195-3.016-7.005-3.016-5.518 0-9.992 4.46-9.992 9.963s4.474 9.963 9.992 9.963c2.81 0 5.27-1.156 7.008-3.018v1.862c0 .336.27.606.608.606h1.826c.338 0 .609-.27.609-.606V17.648a.605.605 0 0 0-.608-.607m-9.443 16.403c-3.868 0-7.008-3.128-7.008-6.988s3.137-6.988 7.008-6.988 7.008 3.129 7.008 6.988-3.14 6.988-7.008 6.988" fill="${wordmarkColor}"/>
-</svg>`;
+function buildLogoText(): string {
+  return `
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+      <tr>
+        <td style="font-size: 28px; font-weight: 700; color: ${BRAND.white}; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; letter-spacing: -0.5px;">
+          <span style="color: ${BRAND.teal};">&#x1f955;</span>&nbsp;&nbsp;<span style="color: #EAEAEA;">carrot</span>
+        </td>
+      </tr>
+    </table>`;
 }
 
 function buildArticleCard(article: ProcessedArticle): string {
@@ -116,7 +125,7 @@ function buildArticleCard(article: ProcessedArticle): string {
                 <!-- Theme badge -->
                 <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-bottom: 8px;">
                   <tr>
-                    <td style="background: ${color}15; border-radius: 4px; padding: 3px 10px;">
+                    <td style="background: ${themeBgColor(article.mainTheme)}; border-radius: 4px; padding: 3px 10px;">
                       <span style="font-size: 11px; font-weight: 600; color: ${color}; text-transform: uppercase; letter-spacing: 0.5px;">${escapeHtml(article.mainTheme)}</span>
                     </td>
                   </tr>
@@ -191,7 +200,7 @@ function buildCompactThemeSection(theme: string, articles: readonly ProcessedArt
               <td>
                 <table role="presentation" cellpadding="0" cellspacing="0" border="0">
                   <tr>
-                    <td style="background: ${color}15; border-radius: 4px; padding: 3px 10px;">
+                    <td style="background: ${themeBgColor(theme)}; border-radius: 4px; padding: 3px 10px;">
                       <span style="font-size: 11px; font-weight: 600; color: ${color}; text-transform: uppercase; letter-spacing: 0.5px;">${theme}</span>
                     </td>
                     <td style="padding-left: 8px; font-size: 11px; color: ${BRAND.mutedText};">${articles.length} article${articles.length !== 1 ? 's' : ''}</td>
@@ -256,24 +265,30 @@ export function buildEmailHtml(articles: readonly ProcessedArticle[], today: str
 
           <!-- Header -->
           <tr>
-            <td style="background: linear-gradient(135deg, ${BRAND.darkNavy} 0%, #0A1628 100%); border-radius: 12px 12px 0 0; padding: 32px 32px 24px 32px; text-align: center;">
+            <td style="background-color: ${BRAND.darkNavy}; border-radius: 12px 12px 0 0; padding: 32px 32px 24px 32px; text-align: center;">
               <!-- Logo -->
               <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
                 <tr>
                   <td align="center" style="padding-bottom: 20px;">
-                    ${buildLogoSvg('#EAEAEA')}
+                    ${buildLogoText()}
                   </td>
                 </tr>
               </table>
               <!-- Divider line -->
               <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="60" style="margin: 0 auto 20px auto;">
                 <tr>
-                  <td style="height: 3px; background: ${BRAND.orange}; border-radius: 2px; font-size: 1px; line-height: 1px;">&nbsp;</td>
+                  <td style="height: 3px; background-color: ${BRAND.orange}; border-radius: 2px; font-size: 1px; line-height: 1px;">&nbsp;</td>
                 </tr>
               </table>
               <!-- Title -->
-              <h1 style="margin: 0 0 6px 0; font-size: 24px; font-weight: 700; color: ${BRAND.white}; letter-spacing: -0.3px;">Industry News Digest</h1>
-              <p style="margin: 0; font-size: 14px; color: #94A3B8; line-height: 20px;">${formattedDate}</p>
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                <tr>
+                  <td align="center" style="font-size: 24px; font-weight: 700; color: ${BRAND.white}; letter-spacing: -0.3px; padding-bottom: 6px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">Industry News Digest</td>
+                </tr>
+                <tr>
+                  <td align="center" style="font-size: 14px; color: #94A3B8; line-height: 20px;">${formattedDate}</td>
+                </tr>
+              </table>
             </td>
           </tr>
 
