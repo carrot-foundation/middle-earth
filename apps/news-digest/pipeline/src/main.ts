@@ -52,7 +52,14 @@ async function main(): Promise<void> {
   const secrets = await loadSecrets(smClient, env);
 
   const dryRun = env.DRY_RUN === 'true';
+  const skipSlack = env.SKIP_SLACK === 'true';
+  const skipEmail = env.SKIP_EMAIL === 'true';
+  const skipNotion = env.SKIP_NOTION === 'true';
+
   if (dryRun) console.log('[DRY RUN] Distribution (Notion, email, Slack) disabled.');
+  if (skipSlack) console.log('[CONFIG] Slack distribution disabled via SKIP_SLACK.');
+  if (skipEmail) console.log('[CONFIG] Email distribution disabled via SKIP_EMAIL.');
+  if (skipNotion) console.log('[CONFIG] Notion distribution disabled via SKIP_NOTION.');
 
   const result = await runPipeline({
     secrets,
@@ -64,6 +71,9 @@ async function main(): Promise<void> {
     notionDatabaseId: env.NOTION_DATABASE_ID,
     gmailTo: env.GMAIL_TO,
     dryRun,
+    skipSlack,
+    skipEmail,
+    skipNotion,
   });
 
   const duration = ((Date.now() - startTime) / 1000).toFixed(1);

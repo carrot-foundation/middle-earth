@@ -22,6 +22,9 @@ interface PipelineConfig {
   readonly notionDatabaseId: string;
   readonly gmailTo: string;
   readonly dryRun: boolean;
+  readonly skipSlack: boolean;
+  readonly skipEmail: boolean;
+  readonly skipNotion: boolean;
 }
 
 const AI_CONCURRENCY = 5;
@@ -51,52 +54,62 @@ async function distributeArticles(
   }
 
   // Notion — parallel with concurrency limit
-  console.log('Creating Notion pages...');
   let notionCreated = 0;
   let notionFailed = 0;
-  for (let i = 0; i < updatedArticles.length; i += NOTION_CONCURRENCY) {
-    const batch = updatedArticles.slice(i, i + NOTION_CONCURRENCY);
-    const results = await Promise.allSettled(
-      batch.map((article) => {
-        if (article.notionPageId) return Promise.resolve({ success: true as const, pageId: article.notionPageId });
-        return createNotionPage(article, config.notionDatabaseId, config.secrets.notionToken);
-      }),
-    );
-    for (let j = 0; j < results.length; j++) {
-      const result = results[j]!;
-      const idx = i + j;
-      const article = updatedArticles[idx]!;
-      if (result.status === 'fulfilled' && result.value.success && result.value.pageId) {
-        if (!article.notionPageId) {
-          updatedArticles[idx] = { ...article, notionPageId: result.value.pageId, status: 'notion-created' };
+  if (config.skipNotion) {
+    console.log('[SKIP] Notion distribution disabled.');
+  } else {
+    console.log('Creating Notion pages...');
+    for (let i = 0; i < updatedArticles.length; i += NOTION_CONCURRENCY) {
+      const batch = updatedArticles.slice(i, i + NOTION_CONCURRENCY);
+      const results = await Promise.allSettled(
+        batch.map((article) => {
+          if (article.notionPageId) return Promise.resolve({ success: true as const, pageId: article.notionPageId });
+          return createNotionPage(article, config.notionDatabaseId, config.secrets.notionToken);
+        }),
+      );
+      for (let j = 0; j < results.length; j++) {
+        const result = results[j]!;
+        const idx = i + j;
+        const article = updatedArticles[idx]!;
+        if (result.status === 'fulfilled' && result.value.success && result.value.pageId) {
+          if (!article.notionPageId) {
+            updatedArticles[idx] = { ...article, notionPageId: result.value.pageId, status: 'notion-created' };
+          }
+          notionCreated++;
+        } else {
+          notionFailed++;
+          const error = result.status === 'rejected'
+            ? (result.reason instanceof Error ? result.reason.message : 'unknown')
+            : (result.value.success ? '' : result.value.error ?? 'unknown');
+          if (error) errors.push(`Notion failed for "${article.title}": ${error}`);
         }
-        notionCreated++;
-      } else {
-        notionFailed++;
-        const error = result.status === 'rejected'
-          ? (result.reason instanceof Error ? result.reason.message : 'unknown')
-          : (result.value.success ? '' : result.value.error ?? 'unknown');
-        if (error) errors.push(`Notion failed for "${article.title}": ${error}`);
       }
     }
   }
 
   // Email
-  console.log('Creating Gmail draft...');
   let emailDraftCreated = false;
-  try {
-    const html = buildEmailHtml(updatedArticles, today);
-    const emailResult = await createGmailDraft(html, config.gmailTo, today, config.secrets.gmail);
-    emailDraftCreated = emailResult.success;
-    if (!emailResult.success) errors.push(`Gmail: ${emailResult.error}`);
-  } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : 'unknown';
-    errors.push(`Gmail draft failed: ${msg}`);
+  if (config.skipEmail) {
+    console.log('[SKIP] Email distribution disabled.');
+  } else {
+    console.log('Creating Gmail draft...');
+    try {
+      const html = buildEmailHtml(updatedArticles, today);
+      const emailResult = await createGmailDraft(html, config.gmailTo, today, config.secrets.gmail);
+      emailDraftCreated = emailResult.success;
+      if (!emailResult.success) errors.push(`Gmail: ${emailResult.error}`);
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : 'unknown';
+      errors.push(`Gmail draft failed: ${msg}`);
+    }
   }
 
-  // Slack — skip if already posted today
+  // Slack
   let slackPosted = false;
-  if (state.slackPostedAt.startsWith(today)) {
+  if (config.skipSlack) {
+    console.log('[SKIP] Slack distribution disabled.');
+  } else if (state.slackPostedAt.startsWith(today)) {
     console.log('Slack digest already posted today — skipping.');
     slackPosted = true;
   } else {

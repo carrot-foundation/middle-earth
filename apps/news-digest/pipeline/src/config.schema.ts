@@ -32,6 +32,9 @@ export const envSchema = z.object({
   NOTION_DATABASE_ID: z.string().default('2a09703d-8e9c-8193-b638-f7bb6b1c7cd8'),
   GMAIL_TO: z.string().default('market-intelligence@carrot.eco'),
   DRY_RUN: z.string().default('false'),
+  SKIP_SLACK: z.string().default('false'),
+  SKIP_EMAIL: z.string().default('false'),
+  SKIP_NOTION: z.string().default('false'),
 });
 
 export type Env = z.infer<typeof envSchema>;
