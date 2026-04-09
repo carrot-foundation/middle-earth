@@ -22,6 +22,14 @@ resource "aws_security_group" "ecs_task" {
     description = "HTTPS outbound to external APIs"
   }
 
+  egress {
+    from_port   = 823
+    to_port     = 823
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "Residential proxy (DataImpulse)"
+  }
+
   # DNS resolution
   egress {
     from_port   = 53

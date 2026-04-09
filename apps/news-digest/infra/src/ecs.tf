@@ -36,6 +36,7 @@ resource "aws_ecs_task_definition" "pipeline" {
       { name = "ANTHROPIC_API_KEY_SECRET_ARN", value = aws_secretsmanager_secret.anthropic_api_key.arn },
       { name = "NOTION_TOKEN_SECRET_ARN", value = aws_secretsmanager_secret.notion_token.arn },
       { name = "GMAIL_SECRET_ARN", value = aws_secretsmanager_secret.gmail_credentials.arn },
+      { name = "PROXY_SECRET_ARN", value = aws_secretsmanager_secret.proxy.arn },
     ]
 
     logConfiguration = {

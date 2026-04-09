@@ -78,11 +78,18 @@ export interface PipelineResult {
   readonly errors: readonly string[];
 }
 
+export interface ProxyConfig {
+  readonly server: string;
+  readonly username: string;
+  readonly password: string;
+}
+
 export interface Secrets {
   readonly carbonPulse: {
     readonly username: string;
     readonly password: string;
   };
+  readonly proxy: ProxyConfig;
   readonly slackToken: string;
   readonly anthropicApiKey: string;
   readonly notionToken: string;

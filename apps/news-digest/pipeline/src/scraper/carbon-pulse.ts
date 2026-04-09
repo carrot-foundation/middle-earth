@@ -1,11 +1,12 @@
 import { chromium } from 'playwright';
 import type { Page } from 'playwright';
-import type { RawArticle, ThemeConfig } from '../types.js';
+import type { ProxyConfig, RawArticle, ThemeConfig } from '../types.js';
 
 const BASE_URL = 'https://carbon-pulse.com';
 const SEARCH_URL = `${BASE_URL}/?sfid=1438&_sf_s=`;
-const LOGIN_URL = `${BASE_URL}/login/`;
+const LOGIN_URL = `${BASE_URL}/wp-login.php`;
 const MAX_ARTICLES_PER_THEME = 3;
+const MAX_ARTICLE_AGE_DAYS = 30;
 const LOGIN_TIMEOUT = 45_000;
 const CF_TIMEOUT = 30_000;
 const REALISTIC_USER_AGENT =
@@ -21,19 +22,37 @@ async function waitForCloudflare(page: Page): Promise<void> {
 }
 
 async function login(page: Page, username: string, password: string): Promise<boolean> {
+  console.log('[Carbon Pulse] Navigating to login page...');
   await page.goto(LOGIN_URL);
+  console.log(`[Carbon Pulse] Login page loaded. Title: "${await page.title()}", URL: ${page.url()}`);
   await waitForCloudflare(page);
-  await page.fill('#username', username);
-  await page.fill('#password', password);
-  await page.getByRole('button', { name: 'Login' }).click();
+  await page.fill('#user_login', username);
+  await page.fill('#user_pass', password);
+  console.log('[Carbon Pulse] Credentials filled, clicking Login...');
+  await page.click('#wp-submit');
   try {
+    console.log(`[Carbon Pulse] After click — Title: "${await page.title()}", URL: ${page.url()}`);
     await waitForCloudflare(page);
+    console.log(`[Carbon Pulse] After CF wait — Title: "${await page.title()}", URL: ${page.url()}`);
     await page.waitForSelector('a[href*="logout"]', { timeout: LOGIN_TIMEOUT });
     return true;
   } catch (error: unknown) {
+    const title = await page.title().catch(() => 'unknown');
+    const url = page.url();
+    const bodyText = await page.evaluate(() => document.body?.innerText?.slice(0, 500)).catch(() => 'unavailable');
+    console.error(`[Carbon Pulse] Login failed — Title: "${title}", URL: ${url}`);
+    console.error(`[Carbon Pulse] Page content: ${bodyText}`);
     const msg = error instanceof Error ? error.message : 'unknown';
     throw new Error(`Carbon Pulse login failed: ${msg}`);
   }
+}
+
+function parseHumanDate(raw: string): string {
+  const parsed = new Date(raw);
+  if (!Number.isNaN(parsed.getTime())) {
+    return parsed.toISOString().slice(0, 10);
+  }
+  return '';
 }
 
 async function extractArticleContent(page: Page): Promise<{
@@ -42,7 +61,7 @@ async function extractArticleContent(page: Page): Promise<{
   date: string;
   categories: string;
 }> {
-  return page.evaluate(() => {
+  const raw = await page.evaluate(() => {
     const entry = document.querySelector('div.entry');
     const content = entry?.textContent?.trim() ?? '';
 
@@ -59,6 +78,8 @@ async function extractArticleContent(page: Page): Promise<{
 
     return { content, author, date, categories };
   });
+
+  return { ...raw, date: parseHumanDate(raw.date) };
 }
 
 async function searchAndExtract(
@@ -87,6 +108,11 @@ async function searchAndExtract(
         console.warn(`[Carbon Pulse] Missing publish date, skipping: ${link.url}`);
         continue;
       }
+      const ageMs = Date.now() - new Date(extracted.date).getTime();
+      if (ageMs > MAX_ARTICLE_AGE_DAYS * 24 * 60 * 60 * 1000) {
+        console.warn(`[Carbon Pulse] Article too old (${extracted.date}), skipping: ${link.url}`);
+        continue;
+      }
       articles.push({
         source: 'carbon-pulse',
         url: link.url,
@@ -110,9 +136,15 @@ export async function scrapeCarbonPulse(
   themes: readonly ThemeConfig[],
   processedUrls: ReadonlySet<string>,
   credentials: { readonly username: string; readonly password: string },
+  proxy: ProxyConfig,
 ): Promise<RawArticle[]> {
   const browser = await chromium.launch({
     headless: false,
+    proxy: {
+      server: proxy.server,
+      username: proxy.username,
+      password: proxy.password,
+    },
     args: ['--disable-blink-features=AutomationControlled', '--no-sandbox'],
   });
   try {
