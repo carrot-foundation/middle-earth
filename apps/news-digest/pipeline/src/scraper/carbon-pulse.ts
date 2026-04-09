@@ -4,7 +4,7 @@ import type { ProxyConfig, RawArticle, ThemeConfig } from '../types.js';
 
 const BASE_URL = 'https://carbon-pulse.com';
 const SEARCH_URL = `${BASE_URL}/?sfid=1438&_sf_s=`;
-const LOGIN_URL = `${BASE_URL}/login/`;
+const LOGIN_URL = `${BASE_URL}/wp-login.php`;
 const MAX_ARTICLES_PER_THEME = 3;
 const MAX_ARTICLE_AGE_DAYS = 30;
 const LOGIN_TIMEOUT = 45_000;
@@ -26,10 +26,10 @@ async function login(page: Page, username: string, password: string): Promise<bo
   await page.goto(LOGIN_URL);
   console.log(`[Carbon Pulse] Login page loaded. Title: "${await page.title()}", URL: ${page.url()}`);
   await waitForCloudflare(page);
-  await page.fill('#username', username);
-  await page.fill('#password', password);
+  await page.fill('#user_login', username);
+  await page.fill('#user_pass', password);
   console.log('[Carbon Pulse] Credentials filled, clicking Login...');
-  await page.getByRole('button', { name: 'Login' }).click();
+  await page.click('#wp-submit');
   try {
     console.log(`[Carbon Pulse] After click — Title: "${await page.title()}", URL: ${page.url()}`);
     await waitForCloudflare(page);
