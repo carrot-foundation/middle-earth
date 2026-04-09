@@ -1,0 +1,230 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`buildEmailHtml — snapshot > matches the canonical fixture snapshot 1`] = `
+"<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>Industry News Digest - 2026-04-09</title>
+  <!--[if mso]>
+  <noscript>
+    <xml>
+      <o:OfficeDocumentSettings>
+        <o:PixelsPerInch>96</o:PixelsPerInch>
+      </o:OfficeDocumentSettings>
+    </xml>
+  </noscript>
+  <![endif]-->
+</head>
+<body style="margin: 0; padding: 0; background-color: #F5F8FA; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; -webkit-font-smoothing: antialiased;">
+  <!-- Outer wrapper -->
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #F5F8FA;">
+    <tr>
+      <td align="center" style="padding: 32px 16px;">
+        <!-- Inner container -->
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" style="width: 600px;">
+
+          <!-- Header -->
+          <tr>
+            <td style="background-color: #000D33; border-radius: 12px 12px 0 0; padding: 32px 32px 24px 32px; text-align: center;">
+              <!-- Logo -->
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                <tr>
+                  <td align="center" style="padding-bottom: 20px;">
+                    
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+      <tr>
+        <td style="font-size: 28px; font-weight: 700; color: #FFFFFF; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; letter-spacing: -0.5px;">
+          <span style="color: #007F82;">&#x1f955;</span>&nbsp;&nbsp;<span style="color: #EAEAEA;">carrot</span>
+        </td>
+      </tr>
+    </table>
+                  </td>
+                </tr>
+              </table>
+              <!-- Divider line -->
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                <tr>
+                  <td align="center" style="padding-bottom: 20px;">
+                    <div style="width: 60px; height: 3px; background-color: #F58216; border-radius: 2px; font-size: 0; line-height: 0;">&#8203;</div>
+                  </td>
+                </tr>
+              </table>
+              <!-- Title -->
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                <tr>
+                  <td align="center" style="font-size: 24px; font-weight: 700; color: #FFFFFF; letter-spacing: -0.3px; padding-bottom: 6px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">Industry News Digest</td>
+                </tr>
+                <tr>
+                  <td align="center" style="font-size: 14px; color: #94A3B8; line-height: 20px;">Thursday, April 9, 2026</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Stats bar -->
+          <tr>
+            <td style="background-color: #FFFFFF; padding: 16px 32px; border-bottom: 1px solid #E2E8F0;">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                <tr>
+                  <td style="font-size: 13px; color: #768196;">
+                    <span style="font-weight: 700; color: #007F82; font-size: 18px;">2</span>
+                    <span style="margin-left: 4px;">articles extracted from</span>
+                    <span style="font-weight: 600; color: #000D33;">Carbon Pulse & ESG News</span>
+                  </td>
+                  <td align="right" style="font-size: 12px; color: #768196;">
+                    2 themes covered
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Articles -->
+          <tr>
+            <td style="background-color: #F5F8FA; padding: 24px 24px 8px 24px;">
+              
+    <!-- Article Card -->
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom: 16px;">
+      <tr>
+        <td style="background-color: #FFFFFF; border-radius: 8px; border: 1px solid #E2E8F0;">
+          <!-- Theme accent bar -->
+          <div style="height: 4px; background-color: #D97706; font-size: 0; line-height: 0; border-radius: 8px 8px 0 0;">&#8203;</div>
+          <!-- Card content -->
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+            <tr>
+              <td style="padding: 20px 24px;">
+                <!-- Theme badge -->
+                <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                  <tr>
+                    <td style="background-color: #FEF3C7; border-radius: 4px; padding: 3px 10px 3px 10px;">
+                      <span style="font-size: 11px; font-weight: 600; color: #D97706; text-transform: uppercase; letter-spacing: 0.5px;">Methane &amp; Super Pollutants</span>
+                    </td>
+                  </tr>
+                </table>
+                <div style="font-size: 0; line-height: 0; height: 8px;">&#8203;</div>
+                <!-- Title -->
+                <a href="https://carbon-pulse.com/article/123/" style="text-decoration: none; color: #000D33;">
+                  <h2 style="margin: 0; font-size: 17px; font-weight: 700; line-height: 24px; color: #000D33;">EU launches methane monitoring framework</h2>
+                </a>
+                <div style="font-size: 0; line-height: 0; height: 8px;">&#8203;</div>
+                <!-- Meta -->
+                <p style="margin: 0; font-size: 12px; color: #768196; line-height: 18px;">
+                  Alice Reporter &nbsp;&#183;&nbsp; Apr 8, 2026 &nbsp;&#183;&nbsp; <a href="https://carbon-pulse.com/article/123/" style="color: #007F82; text-decoration: none;">Carbon Pulse</a>
+                </p>
+                <div style="font-size: 0; line-height: 0; height: 12px;">&#8203;</div>
+                <!-- Summary -->
+                <p style="margin: 0; font-size: 14px; line-height: 22px; color: #4A5568;">The EU proposed a framework for monitoring &amp; reporting methane emissions across sectors.</p>
+                
+      <div style="font-size: 0; line-height: 0; height: 12px;">&#8203;</div>
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+        
+        <tr>
+          <td width="20" valign="top" style="padding: 2px 8px 4px 0; color: #F58216; font-size: 8px; line-height: 20px;">&#9679;</td>
+          <td style="padding: 2px 0 4px 0; font-size: 13px; line-height: 20px; color: #768196;">Policy proposal published</td>
+        </tr>
+        <tr>
+          <td width="20" valign="top" style="padding: 2px 8px 4px 0; color: #F58216; font-size: 8px; line-height: 20px;">&#9679;</td>
+          <td style="padding: 2px 0 4px 0; font-size: 13px; line-height: 20px; color: #768196;">Covers oil, gas, and coal sectors</td>
+        </tr>
+      </table>
+                <div style="font-size: 0; line-height: 0; height: 16px;">&#8203;</div>
+                <!-- Read more -->
+                <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                  <tr>
+                    <td style="background-color: #007F82; border-radius: 4px;">
+                      <a href="https://carbon-pulse.com/article/123/" style="display: inline-block; padding: 8px 20px; font-size: 13px; font-weight: 600; color: #FFFFFF; text-decoration: none;">Read full article</a>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+
+    <!-- Article Card -->
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom: 16px;">
+      <tr>
+        <td style="background-color: #FFFFFF; border-radius: 8px; border: 1px solid #E2E8F0;">
+          <!-- Theme accent bar -->
+          <div style="height: 4px; background-color: #059669; font-size: 0; line-height: 0; border-radius: 8px 8px 0 0;">&#8203;</div>
+          <!-- Card content -->
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+            <tr>
+              <td style="padding: 20px 24px;">
+                <!-- Theme badge -->
+                <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                  <tr>
+                    <td style="background-color: #D1FAE5; border-radius: 4px; padding: 3px 10px 3px 10px;">
+                      <span style="font-size: 11px; font-weight: 600; color: #059669; text-transform: uppercase; letter-spacing: 0.5px;">Circularity &amp; Composting</span>
+                    </td>
+                  </tr>
+                </table>
+                <div style="font-size: 0; line-height: 0; height: 8px;">&#8203;</div>
+                <!-- Title -->
+                <a href="https://esgnews.com/article/456/" style="text-decoration: none; color: #000D33;">
+                  <h2 style="margin: 0; font-size: 17px; font-weight: 700; line-height: 24px; color: #000D33;">Major retailer announces composting program</h2>
+                </a>
+                <div style="font-size: 0; line-height: 0; height: 8px;">&#8203;</div>
+                <!-- Meta -->
+                <p style="margin: 0; font-size: 12px; color: #768196; line-height: 18px;">
+                  Bob Writer &nbsp;&#183;&nbsp; Apr 9, 2026 &nbsp;&#183;&nbsp; <a href="https://esgnews.com/article/456/" style="color: #007F82; text-decoration: none;">ESG News</a>
+                </p>
+                <div style="font-size: 0; line-height: 0; height: 12px;">&#8203;</div>
+                <!-- Summary -->
+                <p style="margin: 0; font-size: 14px; line-height: 22px; color: #4A5568;">A major US retailer announced a nationwide composting program.</p>
+                
+      <div style="font-size: 0; line-height: 0; height: 12px;">&#8203;</div>
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+        
+        <tr>
+          <td width="20" valign="top" style="padding: 2px 8px 4px 0; color: #F58216; font-size: 8px; line-height: 20px;">&#9679;</td>
+          <td style="padding: 2px 0 4px 0; font-size: 13px; line-height: 20px; color: #768196;">Rollout across 500 stores</td>
+        </tr>
+        <tr>
+          <td width="20" valign="top" style="padding: 2px 8px 4px 0; color: #F58216; font-size: 8px; line-height: 20px;">&#9679;</td>
+          <td style="padding: 2px 0 4px 0; font-size: 13px; line-height: 20px; color: #768196;">Partnership with local farms</td>
+        </tr>
+      </table>
+                <div style="font-size: 0; line-height: 0; height: 16px;">&#8203;</div>
+                <!-- Read more -->
+                <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                  <tr>
+                    <td style="background-color: #007F82; border-radius: 4px;">
+                      <a href="https://esgnews.com/article/456/" style="display: inline-block; padding: 8px 20px; font-size: 13px; font-weight: 600; color: #FFFFFF; text-decoration: none;">Read full article</a>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color: #000D33; border-radius: 0 0 12px 12px; padding: 24px 32px; text-align: center;">
+              <p style="margin: 0; font-size: 12px; color: #64748B; line-height: 18px;">
+                This digest is curated by <span style="color: #F58216; font-weight: 600;">Carrot Intelligence</span> from Carbon Pulse & ESG News.
+              </p>
+              <div style="font-size: 0; line-height: 0; height: 8px;">&#8203;</div>
+              <p style="margin: 0; font-size: 11px; color: #475569; line-height: 16px;">
+                Carrot Foundation &nbsp;&#183;&nbsp; <a href="https://carrot.eco" style="color: #007F82; text-decoration: none;">carrot.eco</a>
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>"
+`;

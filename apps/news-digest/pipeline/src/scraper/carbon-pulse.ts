@@ -47,7 +47,7 @@ async function login(page: Page, username: string, password: string): Promise<bo
   }
 }
 
-function parseHumanDate(raw: string): string {
+export function parseHumanDate(raw: string): string {
   const parsed = new Date(raw);
   if (!Number.isNaN(parsed.getTime())) {
     return parsed.toISOString().slice(0, 10);
