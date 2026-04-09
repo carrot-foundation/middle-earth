@@ -17,6 +17,12 @@
     "test": {},
     "lint": {},
     "oxlint": {},
+    "preview-email": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "npx esbuild apps/news-digest/pipeline/src/distribution/preview.ts --bundle --platform=node --target=node22 --outfile=dist/apps/news-digest/pipeline/preview.mjs --format=esm --external:@aws-sdk/* && node dist/apps/news-digest/pipeline/preview.mjs"
+      }
+    },
     "docker-build": {
       "executor": "nx:run-commands",
       "inputs": ["{projectRoot}/src/**/*.ts", "^default"],

@@ -9,6 +9,29 @@ function escapeHtml(text: string): string {
     .replace(/'/g, '&#039;');
 }
 
+function safeHref(value: string): string {
+  try {
+    const u = new URL(value);
+    if (u.protocol !== 'http:' && u.protocol !== 'https:' && u.protocol !== 'mailto:') {
+      return '#';
+    }
+    return escapeHtml(u.toString());
+  } catch {
+    return '#';
+  }
+}
+
+function formatArticleDate(raw: string): string {
+  const d = new Date(raw);
+  if (Number.isNaN(d.getTime())) return escapeHtml(raw);
+  return d.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    timeZone: 'UTC',
+  });
+}
+
 const MAX_SUMMARY_LENGTH = 500;
 const COMPACT_THRESHOLD = 10;
 
@@ -129,13 +152,15 @@ function buildArticleCard(article: ProcessedArticle): string {
                 </table>
                 <div style="font-size: 0; line-height: 0; height: 8px;">&#8203;</div>
                 <!-- Title -->
-                <a href="${url}" style="text-decoration: none; color: ${BRAND.darkNavy};">
-                  <h2 style="margin: 0 0 8px 0; font-size: 17px; font-weight: 700; line-height: 24px; color: ${BRAND.darkNavy};">${escapeHtml(article.title)}</h2>
+                <a href="${safeHref(url)}" style="text-decoration: none; color: ${BRAND.darkNavy};">
+                  <h2 style="margin: 0; font-size: 17px; font-weight: 700; line-height: 24px; color: ${BRAND.darkNavy};">${escapeHtml(article.title)}</h2>
                 </a>
+                <div style="font-size: 0; line-height: 0; height: 8px;">&#8203;</div>
                 <!-- Meta -->
-                <p style="margin: 0 0 12px 0; font-size: 12px; color: ${BRAND.mutedText}; line-height: 18px;">
-                  ${escapeHtml(article.author)} &nbsp;&#183;&nbsp; ${article.date} &nbsp;&#183;&nbsp; <a href="${article.url}" style="color: ${BRAND.teal}; text-decoration: none;">${sourceName}</a>
+                <p style="margin: 0; font-size: 12px; color: ${BRAND.mutedText}; line-height: 18px;">
+                  ${escapeHtml(article.author)} &nbsp;&#183;&nbsp; ${formatArticleDate(article.date)} &nbsp;&#183;&nbsp; <a href="${safeHref(article.url)}" style="color: ${BRAND.teal}; text-decoration: none;">${sourceName}</a>
                 </p>
+                <div style="font-size: 0; line-height: 0; height: 12px;">&#8203;</div>
                 <!-- Summary -->
                 <p style="margin: 0; font-size: 14px; line-height: 22px; color: #4A5568;">${escapeHtml(summary)}</p>
                 ${keyPointsHtml}
@@ -144,7 +169,7 @@ function buildArticleCard(article: ProcessedArticle): string {
                 <table role="presentation" cellpadding="0" cellspacing="0" border="0">
                   <tr>
                     <td style="background-color: ${BRAND.teal}; border-radius: 4px;">
-                      <a href="${url}" style="display: inline-block; padding: 8px 20px; font-size: 13px; font-weight: 600; color: ${BRAND.white}; text-decoration: none;">Read full article</a>
+                      <a href="${safeHref(url)}" style="display: inline-block; padding: 8px 20px; font-size: 13px; font-weight: 600; color: ${BRAND.white}; text-decoration: none;">Read full article</a>
                     </td>
                   </tr>
                 </table>
@@ -166,11 +191,14 @@ function buildCompactArticleRow(article: ProcessedArticle): string {
       <td style="padding: 12px 16px; border-bottom: 1px solid ${BRAND.border};">
         <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
           <tr>
-            <td width="4" style="background: ${color}; border-radius: 2px; font-size: 1px;">&nbsp;</td>
+            <td width="4" valign="top">
+              <div style="width: 4px; height: 40px; background-color: ${color}; border-radius: 2px; font-size: 0; line-height: 0;">&#8203;</div>
+            </td>
             <td style="padding-left: 12px;">
-              <a href="${url}" style="text-decoration: none; color: ${BRAND.darkNavy}; font-size: 14px; font-weight: 600; line-height: 20px;">${escapeHtml(article.title)}</a>
-              <p style="margin: 4px 0 0 0; font-size: 12px; color: ${BRAND.mutedText}; line-height: 16px;">
-                ${escapeHtml(article.author)} &nbsp;&#183;&nbsp; ${article.date} &nbsp;&#183;&nbsp; <span style="color: ${BRAND.teal};">${srcLabel}</span>
+              <a href="${safeHref(url)}" style="text-decoration: none; color: ${BRAND.darkNavy}; font-size: 14px; font-weight: 600; line-height: 20px;">${escapeHtml(article.title)}</a>
+              <div style="font-size: 0; line-height: 0; height: 4px;">&#8203;</div>
+              <p style="margin: 0; font-size: 12px; color: ${BRAND.mutedText}; line-height: 16px;">
+                ${escapeHtml(article.author)} &nbsp;&#183;&nbsp; ${formatArticleDate(article.date)} &nbsp;&#183;&nbsp; <span style="color: ${BRAND.teal};">${srcLabel}</span>
               </p>
             </td>
           </tr>
@@ -184,7 +212,7 @@ function buildCompactThemeSection(theme: string, articles: readonly ProcessedArt
   const rows = articles.map(buildCompactArticleRow).join('\n');
 
   return `
-    <!-- Theme Section: ${theme} -->
+    <!-- Theme Section: ${escapeHtml(theme)} -->
     <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom: 16px;">
       <tr>
         <td style="background-color: ${BRAND.cardBg}; border-radius: 8px; border: 1px solid ${BRAND.border};">
@@ -196,7 +224,7 @@ function buildCompactThemeSection(theme: string, articles: readonly ProcessedArt
                 <table role="presentation" cellpadding="0" cellspacing="0" border="0">
                   <tr>
                     <td style="background-color: ${themeBgColor(theme)}; border-radius: 4px; padding: 3px 10px;">
-                      <span style="font-size: 11px; font-weight: 600; color: ${color}; text-transform: uppercase; letter-spacing: 0.5px;">${theme}</span>
+                      <span style="font-size: 11px; font-weight: 600; color: ${color}; text-transform: uppercase; letter-spacing: 0.5px;">${escapeHtml(theme)}</span>
                     </td>
                     <td style="padding-left: 8px; font-size: 11px; color: ${BRAND.mutedText};">${articles.length} article${articles.length !== 1 ? 's' : ''}</td>
                   </tr>
@@ -291,7 +319,7 @@ export function buildEmailHtml(articles: readonly ProcessedArticle[], today: str
 
           <!-- Stats bar -->
           <tr>
-            <td style="background: ${BRAND.white}; padding: 16px 32px; border-bottom: 1px solid ${BRAND.border};">
+            <td style="background-color: ${BRAND.white}; padding: 16px 32px; border-bottom: 1px solid ${BRAND.border};">
               <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
                 <tr>
                   <td style="font-size: 13px; color: ${BRAND.mutedText};">
@@ -309,17 +337,18 @@ export function buildEmailHtml(articles: readonly ProcessedArticle[], today: str
 
           <!-- Articles -->
           <tr>
-            <td style="background: ${BRAND.lightBg}; padding: 24px 24px 8px 24px;">
+            <td style="background-color: ${BRAND.lightBg}; padding: 24px 24px 8px 24px;">
               ${articleCards}
             </td>
           </tr>
 
           <!-- Footer -->
           <tr>
-            <td style="background: ${BRAND.darkNavy}; border-radius: 0 0 12px 12px; padding: 24px 32px; text-align: center;">
-              <p style="margin: 0 0 8px 0; font-size: 12px; color: #64748B; line-height: 18px;">
+            <td style="background-color: ${BRAND.darkNavy}; border-radius: 0 0 12px 12px; padding: 24px 32px; text-align: center;">
+              <p style="margin: 0; font-size: 12px; color: #64748B; line-height: 18px;">
                 This digest is curated by <span style="color: ${BRAND.orange}; font-weight: 600;">Carrot Intelligence</span> from ${sourceNames}.
               </p>
+              <div style="font-size: 0; line-height: 0; height: 8px;">&#8203;</div>
               <p style="margin: 0; font-size: 11px; color: #475569; line-height: 16px;">
                 Carrot Foundation &nbsp;&#183;&nbsp; <a href="https://carrot.eco" style="color: ${BRAND.teal}; text-decoration: none;">carrot.eco</a>
               </p>
