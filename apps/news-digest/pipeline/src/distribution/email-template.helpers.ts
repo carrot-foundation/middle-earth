@@ -94,7 +94,7 @@ function buildArticleCard(article: ProcessedArticle): string {
   let keyPointsHtml = '';
   if (article.keyPoints.length > 0) {
     keyPointsHtml = `
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"><tr><td style="height: 12px; font-size: 1px; line-height: 1px;">&nbsp;</td></tr></table>
+      <div style="font-size: 0; line-height: 0; height: 12px;">&#8203;</div>
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
         ${article.keyPoints
           .map(
@@ -112,13 +112,9 @@ function buildArticleCard(article: ProcessedArticle): string {
     <!-- Article Card -->
     <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom: 16px;">
       <tr>
-        <td style="background: ${BRAND.cardBg}; border-radius: 8px; border: 1px solid ${BRAND.border}; overflow: hidden;">
+        <td style="background-color: ${BRAND.cardBg}; border-radius: 8px; border: 1px solid ${BRAND.border};">
           <!-- Theme accent bar -->
-          <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
-            <tr>
-              <td style="height: 4px; background: ${color}; font-size: 1px; line-height: 1px;">&nbsp;</td>
-            </tr>
-          </table>
+          <div style="height: 4px; background-color: ${color}; font-size: 0; line-height: 0; border-radius: 8px 8px 0 0;">&#8203;</div>
           <!-- Card content -->
           <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
             <tr>
@@ -126,12 +122,12 @@ function buildArticleCard(article: ProcessedArticle): string {
                 <!-- Theme badge -->
                 <table role="presentation" cellpadding="0" cellspacing="0" border="0">
                   <tr>
-                    <td style="background: ${themeBgColor(article.mainTheme)}; border-radius: 4px; padding: 3px 10px 3px 10px;">
+                    <td style="background-color: ${themeBgColor(article.mainTheme)}; border-radius: 4px; padding: 3px 10px 3px 10px;">
                       <span style="font-size: 11px; font-weight: 600; color: ${color}; text-transform: uppercase; letter-spacing: 0.5px;">${escapeHtml(article.mainTheme)}</span>
                     </td>
                   </tr>
                 </table>
-                <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"><tr><td style="height: 8px; font-size: 1px; line-height: 1px;">&nbsp;</td></tr></table>
+                <div style="font-size: 0; line-height: 0; height: 8px;">&#8203;</div>
                 <!-- Title -->
                 <a href="${url}" style="text-decoration: none; color: ${BRAND.darkNavy};">
                   <h2 style="margin: 0 0 8px 0; font-size: 17px; font-weight: 700; line-height: 24px; color: ${BRAND.darkNavy};">${escapeHtml(article.title)}</h2>
@@ -143,12 +139,11 @@ function buildArticleCard(article: ProcessedArticle): string {
                 <!-- Summary -->
                 <p style="margin: 0; font-size: 14px; line-height: 22px; color: #4A5568;">${escapeHtml(summary)}</p>
                 ${keyPointsHtml}
-                <!-- Read more spacer -->
-                <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"><tr><td style="height: 16px; font-size: 1px; line-height: 1px;">&nbsp;</td></tr></table>
+                <div style="font-size: 0; line-height: 0; height: 16px;">&#8203;</div>
                 <!-- Read more -->
                 <table role="presentation" cellpadding="0" cellspacing="0" border="0">
                   <tr>
-                    <td style="background: ${BRAND.teal}; border-radius: 4px;">
+                    <td style="background-color: ${BRAND.teal}; border-radius: 4px;">
                       <a href="${url}" style="display: inline-block; padding: 8px 20px; font-size: 13px; font-weight: 600; color: ${BRAND.white}; text-decoration: none;">Read full article</a>
                     </td>
                   </tr>
@@ -192,19 +187,15 @@ function buildCompactThemeSection(theme: string, articles: readonly ProcessedArt
     <!-- Theme Section: ${theme} -->
     <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom: 16px;">
       <tr>
-        <td style="background: ${BRAND.cardBg}; border-radius: 8px; border: 1px solid ${BRAND.border}; overflow: hidden;">
+        <td style="background-color: ${BRAND.cardBg}; border-radius: 8px; border: 1px solid ${BRAND.border};">
           <!-- Theme header -->
-          <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
-            <tr>
-              <td style="height: 3px; background: ${color}; font-size: 1px; line-height: 1px;">&nbsp;</td>
-            </tr>
-          </table>
+          <div style="height: 3px; background-color: ${color}; font-size: 0; line-height: 0; border-radius: 8px 8px 0 0;">&#8203;</div>
           <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
             <tr>
               <td style="padding: 12px 16px 0 16px;">
                 <table role="presentation" cellpadding="0" cellspacing="0" border="0">
                   <tr>
-                    <td style="background: ${themeBgColor(theme)}; border-radius: 4px; padding: 3px 10px;">
+                    <td style="background-color: ${themeBgColor(theme)}; border-radius: 4px; padding: 3px 10px;">
                       <span style="font-size: 11px; font-weight: 600; color: ${color}; text-transform: uppercase; letter-spacing: 0.5px;">${theme}</span>
                     </td>
                     <td style="padding-left: 8px; font-size: 11px; color: ${BRAND.mutedText};">${articles.length} article${articles.length !== 1 ? 's' : ''}</td>
@@ -282,11 +273,7 @@ export function buildEmailHtml(articles: readonly ProcessedArticle[], today: str
               <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
                 <tr>
                   <td align="center" style="padding-bottom: 20px;">
-                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="60">
-                      <tr>
-                        <td style="height: 3px; background-color: ${BRAND.orange}; border-radius: 2px; font-size: 1px; line-height: 1px;">&nbsp;</td>
-                      </tr>
-                    </table>
+                    <div style="width: 60px; height: 3px; background-color: ${BRAND.orange}; border-radius: 2px; font-size: 0; line-height: 0;">&#8203;</div>
                   </td>
                 </tr>
               </table>
