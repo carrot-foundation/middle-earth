@@ -4,7 +4,7 @@ import type { ProxyConfig, RawArticle, ThemeConfig } from '../types.js';
 
 const BASE_URL = 'https://carbon-pulse.com';
 const SEARCH_URL = `${BASE_URL}/?sfid=1438&_sf_s=`;
-const LOGIN_URL = `${BASE_URL}/wp-login.php`;
+const LOGIN_URL = `${BASE_URL}/login/`;
 const MAX_ARTICLES_PER_THEME = 3;
 const MAX_ARTICLE_AGE_DAYS = 30;
 const LOGIN_TIMEOUT = 45_000;
@@ -21,19 +21,51 @@ async function waitForCloudflare(page: Page): Promise<void> {
   }
 }
 
+async function fillAndSubmitWpLogin(page: Page, username: string, password: string): Promise<void> {
+  await waitForCloudflare(page);
+  await page.fill('#user_login', username);
+  await page.fill('#user_pass', password);
+  console.log('[Carbon Pulse] WP credentials filled, clicking submit...');
+  await page.click('#wp-submit');
+  await page.waitForLoadState('domcontentloaded');
+}
+
+async function fillAndSubmitCustomLogin(page: Page, username: string, password: string): Promise<void> {
+  await waitForCloudflare(page);
+  // Custom /login/ page uses standard input names inside a themed form
+  const usernameInput = page.locator('input[name="log"], input[name="username"], #user_login');
+  const passwordInput = page.locator('input[name="pwd"], input[name="password"], #user_pass');
+  const submitButton = page.locator('input[type="submit"], button[type="submit"], #wp-submit');
+
+  await usernameInput.first().fill(username);
+  await passwordInput.first().fill(password);
+  console.log('[Carbon Pulse] Custom login credentials filled, submitting...');
+  await submitButton.first().click();
+  await page.waitForLoadState('domcontentloaded');
+}
+
 async function login(page: Page, username: string, password: string): Promise<boolean> {
   console.log('[Carbon Pulse] Navigating to login page...');
   await page.goto(LOGIN_URL);
   console.log(`[Carbon Pulse] Login page loaded. Title: "${await page.title()}", URL: ${page.url()}`);
-  await waitForCloudflare(page);
-  await page.fill('#user_login', username);
-  await page.fill('#user_pass', password);
-  console.log('[Carbon Pulse] Credentials filled, clicking Login...');
-  await page.click('#wp-submit');
+
   try {
-    console.log(`[Carbon Pulse] After click — Title: "${await page.title()}", URL: ${page.url()}`);
+    // Step 1: Fill the custom /login/ page (or wp-login if no redirect happened)
+    if (page.url().includes('wp-login.php')) {
+      await fillAndSubmitWpLogin(page, username, password);
+    } else {
+      await fillAndSubmitCustomLogin(page, username, password);
+    }
+    console.log(`[Carbon Pulse] After submit — Title: "${await page.title()}", URL: ${page.url()}`);
+
+    // Step 2: Carbon Pulse may redirect to wp-login.php for a second auth step
+    if (page.url().includes('wp-login.php')) {
+      console.log('[Carbon Pulse] Redirected to wp-login.php, re-submitting credentials...');
+      await fillAndSubmitWpLogin(page, username, password);
+      console.log(`[Carbon Pulse] After wp-login submit — Title: "${await page.title()}", URL: ${page.url()}`);
+    }
+
     await waitForCloudflare(page);
-    console.log(`[Carbon Pulse] After CF wait — Title: "${await page.title()}", URL: ${page.url()}`);
     await page.waitForSelector('a[href*="logout"]', { timeout: LOGIN_TIMEOUT });
     return true;
   } catch (error: unknown) {
