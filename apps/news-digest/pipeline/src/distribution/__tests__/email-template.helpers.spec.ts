@@ -46,6 +46,27 @@ describe('buildEmailHtml — render branches', () => {
     expect(html).toContain('<!-- Theme Section:');
     expect(html).not.toContain('<!-- Article Card -->');
   });
+
+  it('labels each source correctly in the compact branch (Trellis keeps its full name)', () => {
+    const articles = [
+      ...manyArticles(10),
+      stubProcessedArticle({
+        source: 'trellis',
+        url: 'https://trellis.net/article/x/',
+        title: 'Trellis compact pick',
+      }),
+      stubProcessedArticle({
+        source: 'esgnews',
+        url: 'https://esgnews.com/article/y/',
+        title: 'ESG compact pick',
+      }),
+    ];
+    const html = buildEmailHtml(articles, '2026-04-09');
+    // Each source's compact badge appears in the compact branch.
+    expect(html).toContain('>CP<');
+    expect(html).toContain('>ESG<');
+    expect(html).toContain('>Trellis<');
+  });
 });
 
 describe('buildEmailHtml — escaping', () => {

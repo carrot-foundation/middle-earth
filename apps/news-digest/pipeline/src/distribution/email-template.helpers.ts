@@ -1,4 +1,5 @@
 import type { ProcessedArticle } from '../types.js';
+import { sourceLabel, compactSourceLabel } from '../helpers/source.helpers.js';
 
 function escapeHtml(text: string): string {
   return text
@@ -66,10 +67,6 @@ function themeColor(theme: string): string {
 
 function themeBgColor(theme: string): string {
   return (THEME_COLORS[theme] ?? DEFAULT_THEME).bgColor;
-}
-
-function sourceLabel(source: string): string {
-  return source === 'carbon-pulse' ? 'Carbon Pulse' : 'ESG News';
 }
 
 function formatDate(dateStr: string): string {
@@ -184,7 +181,7 @@ function buildArticleCard(article: ProcessedArticle): string {
 function buildCompactArticleRow(article: ProcessedArticle): string {
   const url = articleUrl(article);
   const color = themeColor(article.mainTheme);
-  const srcLabel = sourceLabel(article.source) === 'Carbon Pulse' ? 'CP' : 'ESG';
+  const srcLabel = compactSourceLabel(article.source);
 
   return `
     <tr>
