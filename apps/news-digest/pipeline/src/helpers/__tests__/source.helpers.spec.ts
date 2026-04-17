@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { sourceLabel } from '../source.helpers.js';
+import { sourceLabel, compactSourceLabel } from '../source.helpers.js';
 
 describe('sourceLabel', () => {
   it.each<['carbon-pulse' | 'esgnews' | 'trellis', string]>([
@@ -8,5 +8,15 @@ describe('sourceLabel', () => {
     ['trellis', 'Trellis'],
   ])('maps %s to %s', (source, expected) => {
     expect(sourceLabel(source)).toBe(expected);
+  });
+});
+
+describe('compactSourceLabel', () => {
+  it.each<['carbon-pulse' | 'esgnews' | 'trellis', string]>([
+    ['carbon-pulse', 'CP'],
+    ['esgnews', 'ESG'],
+    ['trellis', 'Trellis'],
+  ])('maps %s to %s', (source, expected) => {
+    expect(compactSourceLabel(source)).toBe(expected);
   });
 });

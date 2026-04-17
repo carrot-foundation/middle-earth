@@ -1,5 +1,5 @@
 import type { ProcessedArticle } from '../types.js';
-import { sourceLabel } from '../helpers/source.helpers.js';
+import { sourceLabel, compactSourceLabel } from '../helpers/source.helpers.js';
 
 function escapeHtml(text: string): string {
   return text
@@ -181,7 +181,7 @@ function buildArticleCard(article: ProcessedArticle): string {
 function buildCompactArticleRow(article: ProcessedArticle): string {
   const url = articleUrl(article);
   const color = themeColor(article.mainTheme);
-  const srcLabel = sourceLabel(article.source) === 'Carbon Pulse' ? 'CP' : 'ESG';
+  const srcLabel = compactSourceLabel(article.source);
 
   return `
     <tr>
