@@ -4,6 +4,7 @@ import { deduplicateArticles } from './helpers/dedup.helpers.js';
 import { buildArticleMarkdown, slugify } from './helpers/markdown.helpers.js';
 import { scrapeCarbonPulse } from './scraper/carbon-pulse.js';
 import { scrapeEsgNews } from './scraper/esg-news.js';
+import { scrapeTrellis } from './scraper/trellis.js';
 import { processArticle } from './ai/article-processor.js';
 import { postSlackDigest } from './distribution/slack.js';
 import { createNotionPage } from './distribution/notion.js';
@@ -249,24 +250,36 @@ export async function runPipeline(config: PipelineConfig): Promise<PipelineResul
     console.error(errors[errors.length - 1]);
   }
 
-  const allRaw = [...cpArticles, ...esgArticles];
+  // Step 5: Scrape Trellis
+  console.log('Step 5: Scraping Trellis...');
+  let trellisArticles: RawArticle[] = [];
+  try {
+    trellisArticles = await scrapeTrellis(eligibleThemes, processedUrls, config.secrets.anthropicApiKey);
+    console.log(`Trellis: ${trellisArticles.length} articles`);
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : 'unknown';
+    errors.push(`Trellis scraping failed: ${msg}`);
+    console.error(errors[errors.length - 1]);
+  }
+
+  const allRaw = [...cpArticles, ...esgArticles, ...trellisArticles];
 
   if (allRaw.length === 0) {
     console.log('No articles scraped.');
     return {
-      steps: [], articlesScraped: 0, articlesBySource: { 'carbon-pulse': 0, esgnews: 0 },
+      steps: [], articlesScraped: 0, articlesBySource: { 'carbon-pulse': 0, esgnews: 0, trellis: 0 },
       deduped: 0, claudeProcessed: 0, claudeFallbacks: 0, notionCreated: 0, notionFailed: 0,
       emailDraftCreated: false, slackPosted: false, errors,
     };
   }
 
-  // Step 5: Dedup
-  console.log('Step 5: Cross-source dedup...');
+  // Step 6: Dedup
+  console.log('Step 6: Cross-source dedup...');
   const { kept, removed } = deduplicateArticles(allRaw);
   console.log(`Kept: ${kept.length}, Removed: ${removed.length}`);
 
-  // Step 6: Claude API — parallel with concurrency limit
-  console.log('Step 6: Processing articles with Claude API...');
+  // Step 7: Claude API — parallel with concurrency limit
+  console.log('Step 7: Processing articles with Claude API...');
   const processedArticles: ProcessedArticle[] = [];
   let claudeProcessed = 0;
   let claudeFallbacks = 0;
@@ -301,8 +314,8 @@ export async function runPipeline(config: PipelineConfig): Promise<PipelineResul
     }
   }
 
-  // Step 7: Save articles to S3 — parallel, individual failures don't crash pipeline
-  console.log('Step 7: Saving articles to S3...');
+  // Step 8: Save articles to S3 — parallel, individual failures don't crash pipeline
+  console.log('Step 8: Saving articles to S3...');
   const saveResults = await Promise.allSettled(
     processedArticles.map((article) => {
       const markdown = buildArticleMarkdown(article);
@@ -317,11 +330,11 @@ export async function runPipeline(config: PipelineConfig): Promise<PipelineResul
     }
   }
 
-  // Steps 8-10: Distribute
+  // Steps 9-11: Distribute
   const dist = await distributeArticles(processedArticles, config, today, errors, state);
 
-  // Step 11: Save final state — protected with error handling
-  console.log('Step 11: Saving final state to S3...');
+  // Step 12: Save final state — protected with error handling
+  console.log('Step 12: Saving final state to S3...');
   const updatedThemes = { ...state.themeLastProcessed };
   for (const theme of eligibleThemes) {
     updatedThemes[theme.name] = today;
