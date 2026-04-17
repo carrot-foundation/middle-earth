@@ -1,4 +1,5 @@
 import type { ProcessedArticle } from '../types.js';
+import { sourceLabel } from './source.helpers.js';
 
 const MAX_SLUG_LENGTH = 63;
 
@@ -11,10 +12,6 @@ export function slugify(title: string): string {
     .replace(/-+/g, '-')
     .slice(0, MAX_SLUG_LENGTH)
     .replace(/-$/, '');
-}
-
-function sourceLabel(source: string): string {
-  return source === 'carbon-pulse' ? 'Carbon Pulse' : 'ESG News';
 }
 
 export function buildArticleMarkdown(article: ProcessedArticle): string {

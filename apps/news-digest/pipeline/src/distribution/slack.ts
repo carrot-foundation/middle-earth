@@ -1,4 +1,5 @@
 import type { ProcessedArticle } from '../types.js';
+import { sourceLabel } from '../helpers/source.helpers.js';
 
 interface SlackBlock {
   type: string;
@@ -23,11 +24,6 @@ const MAX_ARTICLES = 15;
 
 function escapeSlackMrkdwn(text: string): string {
   return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
-
-function sourceLabel(source: ProcessedArticle['source']): string {
-  if (source === 'carbon-pulse') return 'Carbon Pulse';
-  return 'ESG News';
 }
 
 function articleUrl(article: ProcessedArticle): string {

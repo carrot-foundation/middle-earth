@@ -1,5 +1,6 @@
 import type { ProcessedArticle } from '../types.js';
 import { NOTION_VALID_THEMES } from '../config.constants.js';
+import { sourceLabel } from '../helpers/source.helpers.js';
 
 interface NotionResult {
   readonly success: boolean;
@@ -20,7 +21,7 @@ function buildPageProperties(article: ProcessedArticle): Record<string, unknown>
     },
     // Trailing space in 'Source ' is intentional — matches the Notion database column name
     'Source ': {
-      rich_text: [{ text: { content: article.source === 'carbon-pulse' ? 'Carbon Pulse' : 'ESG News' } }],
+      rich_text: [{ text: { content: sourceLabel(article.source) } }],
     },
     Company: {
       rich_text: [{ text: { content: 'Not Applicable' } }],

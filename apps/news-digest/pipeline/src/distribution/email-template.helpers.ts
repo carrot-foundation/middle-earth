@@ -1,4 +1,5 @@
 import type { ProcessedArticle } from '../types.js';
+import { sourceLabel } from '../helpers/source.helpers.js';
 
 function escapeHtml(text: string): string {
   return text
@@ -66,10 +67,6 @@ function themeColor(theme: string): string {
 
 function themeBgColor(theme: string): string {
   return (THEME_COLORS[theme] ?? DEFAULT_THEME).bgColor;
-}
-
-function sourceLabel(source: string): string {
-  return source === 'carbon-pulse' ? 'Carbon Pulse' : 'ESG News';
 }
 
 function formatDate(dateStr: string): string {
