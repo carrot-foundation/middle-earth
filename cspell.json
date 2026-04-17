@@ -35,7 +35,8 @@
     "hashicorp",
     "xvfb",
     "Xvfb",
-    "KHTML"
+    "KHTML",
+    "unstub"
   ],
   "dictionaries": [
     "companies",
