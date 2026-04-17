@@ -131,6 +131,27 @@ describe('curateTrellisArticles', () => {
     expect(result).toEqual([]);
   });
 
+  it('returns empty array when fetch is aborted (timeout)', async () => {
+    const candidates = [stubCandidate()];
+    const abortError = new Error('The operation was aborted');
+    abortError.name = 'AbortError';
+    vi.mocked(fetch).mockRejectedValueOnce(abortError);
+    const result = await curateTrellisArticles(candidates, THEME_NAMES, 'test-key');
+    expect(result).toEqual([]);
+  });
+
+  it('passes an AbortSignal to fetch so the request can be timed out', async () => {
+    const candidates = [stubCandidate({ url: 'https://trellis.net/article/a/' })];
+    vi.mocked(fetch).mockResolvedValueOnce(
+      anthropicResponse([
+        { url: 'https://trellis.net/article/a/', mainTheme: 'Carbon Markets', reason: 'ok' },
+      ]),
+    );
+    await curateTrellisArticles(candidates, THEME_NAMES, 'test-key');
+    const [, init] = vi.mocked(fetch).mock.calls[0]!;
+    expect(init?.signal).toBeInstanceOf(AbortSignal);
+  });
+
   it('tolerates markdown fences around JSON in Claude output', async () => {
     const candidates = [stubCandidate({ url: 'https://trellis.net/article/a/' })];
     vi.mocked(fetch).mockResolvedValueOnce(

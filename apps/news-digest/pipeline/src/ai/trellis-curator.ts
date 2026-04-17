@@ -3,6 +3,7 @@ const ANTHROPIC_VERSION = '2023-06-01';
 const MODEL = 'claude-haiku-4-5-20251001';
 const MAX_TOKENS = 512;
 const MAX_PICKS = 2;
+const FETCH_TIMEOUT_MS = 15_000;
 
 export interface TrellisCandidate {
   readonly url: string;
@@ -109,9 +110,12 @@ export async function curateTrellisArticles(
   const themeNameSet = new Set(themeNames);
 
   let response: Response;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
     response = await fetch(ANTHROPIC_API_URL, {
       method: 'POST',
+      signal: controller.signal,
       headers: {
         'Content-Type': 'application/json',
         'x-api-key': anthropicApiKey,
@@ -125,9 +129,14 @@ export async function curateTrellisArticles(
       }),
     });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'unknown';
+    const isAbort = error instanceof Error && error.name === 'AbortError';
+    const message = isAbort
+      ? `timeout after ${FETCH_TIMEOUT_MS}ms`
+      : (error instanceof Error ? error.message : 'unknown');
     console.error(`[Trellis Curator] fetch failed: ${message}`);
     return [];
+  } finally {
+    clearTimeout(timeoutId);
   }
 
   if (!response.ok) {
