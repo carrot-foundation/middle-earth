@@ -51,4 +51,49 @@ describe('deduplicateArticles', () => {
     const result = deduplicateArticles([article1, article2]);
     expect(result.kept).toHaveLength(1);
   });
+
+  it('keeps Carbon Pulse over Trellis and ESG News for similar titles', () => {
+    const articles = [
+      stubArticle({ source: 'esgnews', url: 'https://esgnews.com/1/', title: 'EU carbon market hits record high' }),
+      stubArticle({ source: 'trellis', url: 'https://trellis.net/article/trl-1/', title: 'EU carbon market reaches record high' }),
+      stubArticle({ source: 'carbon-pulse', url: 'https://carbon-pulse.com/cp-1/', title: 'EU carbon market hits record high' }),
+    ];
+    const { kept, removed } = deduplicateArticles(articles);
+    expect(kept).toHaveLength(1);
+    expect(kept[0]?.source).toBe('carbon-pulse');
+    expect(removed).toHaveLength(2);
+  });
+
+  it('keeps Trellis over ESG News for similar titles', () => {
+    const articles = [
+      stubArticle({ source: 'esgnews', url: 'https://esgnews.com/2/', title: 'Methane emissions dropped in 2026' }),
+      stubArticle({ source: 'trellis', url: 'https://trellis.net/article/trl-2/', title: 'Methane emissions drop in 2026' }),
+    ];
+    const { kept, removed } = deduplicateArticles(articles);
+    expect(kept).toHaveLength(1);
+    expect(kept[0]?.source).toBe('trellis');
+    expect(removed).toHaveLength(1);
+    expect(removed[0]?.source).toBe('esgnews');
+  });
+
+  it('keeps distinct-title articles from all three sources', () => {
+    const articles = [
+      stubArticle({ source: 'carbon-pulse', url: 'https://carbon-pulse.com/a/', title: 'Alpha policy update' }),
+      stubArticle({ source: 'trellis', url: 'https://trellis.net/article/b/', title: 'Beta market analysis' }),
+      stubArticle({ source: 'esgnews', url: 'https://esgnews.com/c/', title: 'Gamma corporate news' }),
+    ];
+    const { kept, removed } = deduplicateArticles(articles);
+    expect(kept).toHaveLength(3);
+    expect(removed).toHaveLength(0);
+  });
+
+  it('removes a second article with the same URL regardless of source', () => {
+    const articles = [
+      stubArticle({ source: 'trellis', url: 'https://same.example/x/', title: 'First title' }),
+      stubArticle({ source: 'esgnews', url: 'https://same.example/x/', title: 'Unrelated title' }),
+    ];
+    const { kept, removed } = deduplicateArticles(articles);
+    expect(kept).toHaveLength(1);
+    expect(removed).toHaveLength(1);
+  });
 });

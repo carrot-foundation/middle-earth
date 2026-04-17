@@ -18,11 +18,19 @@ interface DedupResult {
   readonly removed: RawArticle[];
 }
 
+const SOURCE_PRIORITY: Record<RawArticle['source'], number> = {
+  'carbon-pulse': 0,
+  trellis: 1,
+  esgnews: 2,
+};
+
 export function deduplicateArticles(articles: readonly RawArticle[]): DedupResult {
   const kept: RawArticle[] = [];
   const removed: RawArticle[] = [];
   const seenUrls = new Set<string>();
-  const sorted = [...articles].sort((a, b) => a.source === 'carbon-pulse' && b.source !== 'carbon-pulse' ? -1 : 1);
+  const sorted = [...articles].sort(
+    (a, b) => SOURCE_PRIORITY[a.source] - SOURCE_PRIORITY[b.source],
+  );
 
   for (const article of sorted) {
     if (seenUrls.has(article.url)) { removed.push(article); continue; }
