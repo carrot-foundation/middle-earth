@@ -1,5 +1,5 @@
 export interface RawArticle {
-  readonly source: 'carbon-pulse' | 'esgnews';
+  readonly source: 'carbon-pulse' | 'esgnews' | 'trellis';
   readonly url: string;
   readonly title: string;
   readonly date: string;
@@ -11,7 +11,7 @@ export interface RawArticle {
 }
 
 export interface ProcessedArticle {
-  readonly source: 'carbon-pulse' | 'esgnews';
+  readonly source: 'carbon-pulse' | 'esgnews' | 'trellis';
   readonly url: string;
   readonly title: string;
   readonly date: string;
@@ -42,6 +42,7 @@ export interface ThemeConfig {
   readonly frequency: ThemeFrequency;
   readonly carbonPulseSearchTerms: string;
   readonly esgNewsSearchTerms: string;
+  readonly trellisSearchTerms: string;
 }
 
 export type StepName =
@@ -49,6 +50,7 @@ export type StepName =
   | 'theme-selection'
   | 'scrape-carbon-pulse'
   | 'scrape-esg-news'
+  | 'scrape-trellis'
   | 'dedup'
   | 'ai-process'
   | 'save-articles'
