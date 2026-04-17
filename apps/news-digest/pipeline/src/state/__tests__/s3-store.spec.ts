@@ -54,6 +54,36 @@ describe('S3Store', () => {
     expect(state.themeLastProcessed['Carbon Markets']).toBe('2026-03-20');
   });
 
+  it('loadState accepts Trellis-sourced articles in existing state', async () => {
+    const existingState = {
+      processedArticles: [{
+        source: 'trellis',
+        url: 'https://trellis.net/article/sample/',
+        title: 'Trellis Sample',
+        date: '2026-04-15',
+        author: 'Trellis',
+        mainTheme: 'Carbon Markets',
+        categories: '',
+        location: '',
+        summary: 'Summary',
+        keyPoints: [],
+        segment: 'Policy & Regulation',
+        fullContent: '',
+        markdownFile: 'sample.md',
+        notionPageId: null,
+        processedAt: '2026-04-15T10:00:00Z',
+        status: 'markdown-only',
+      }],
+      themeLastProcessed: {},
+    };
+    mockSend.mockResolvedValueOnce({
+      Body: { transformToString: () => Promise.resolve(JSON.stringify(existingState)) },
+    });
+    const state = await store.loadState('state.json');
+    expect(state.processedArticles).toHaveLength(1);
+    expect(state.processedArticles[0]?.source).toBe('trellis');
+  });
+
   it('saveState uploads JSON to S3', async () => {
     mockSend.mockResolvedValueOnce({});
     const state = { processedArticles: [], themeLastProcessed: {}, slackPostedAt: '' };
