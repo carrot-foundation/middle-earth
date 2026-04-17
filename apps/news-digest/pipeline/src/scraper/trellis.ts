@@ -205,14 +205,12 @@ async function collectHomepageCandidates(
   }
 
   const items = await extractListing(page);
-  const fresh = items
-    .filter((item) => !excludeUrls.has(item.url))
-    .slice(0, CANDIDATE_POOL_SIZE);
-
   const candidates: TrellisCandidate[] = [];
-  for (const item of fresh) {
+  for (const item of items) {
+    if (excludeUrls.has(item.url)) continue;
     const candidate = await fetchCandidateMetadata(page, item);
     if (candidate) candidates.push(candidate);
+    if (candidates.length >= CANDIDATE_POOL_SIZE) break;
   }
   return candidates;
 }
