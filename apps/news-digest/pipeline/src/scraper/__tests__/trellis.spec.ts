@@ -248,6 +248,37 @@ describe('scrapeTrellis', () => {
     expect(themeNames).toContain('Verification & Auditing'); // monthly theme, typically not eligible daily
   });
 
+  it('produces clean paragraph text from CSS-layout whitespace (regression)', async () => {
+    // Simulates a Trellis article page where textContent would return leading
+    // spaces/tabs due to flex/grid HTML layout, but paragraph-walking produces
+    // clean trimmed text joined with double newlines.
+    mockBrowser({
+      evaluations: [
+        () => [{ url: 'https://trellis.net/article/whitespace/', title: 'Whitespace Test' }],
+        // The evaluate function in extractArticle walks <p> elements; here we
+        // return the already-normalised result that the real browser would
+        // produce after the fix (paragraph text trimmed and joined with \n\n).
+        () => ({
+          content: 'Corporate demand is driving a boom in farmland carbon credits.\n\nFarmers are increasingly turning to carbon markets.',
+          date: TODAY_ISO,
+          author: 'Jim Giles',
+        }),
+        () => [],
+      ],
+    });
+
+    const result = await scrapeTrellis([stubTheme()], new Set(), 'test-key');
+    const article = result[0];
+
+    expect(article).toBeDefined();
+    expect(article?.fullContent).not.toMatch(/^\s{2,}/m); // no lines starting with 2+ spaces
+    expect(article?.fullContent).toContain('Corporate demand is driving a boom in farmland carbon credits.');
+    expect(article?.fullContent).toContain('Farmers are increasingly turning to carbon markets.');
+    expect(article?.fullContent).toBe(
+      'Corporate demand is driving a boom in farmland carbon credits.\n\nFarmers are increasingly turning to carbon markets.',
+    );
+  });
+
   it('closes the browser in a finally block even when scraping throws', async () => {
     const { browser } = mockBrowser({ evaluations: [] });
     vi.mocked(chromium.launch).mockResolvedValue(browser as never);

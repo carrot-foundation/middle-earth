@@ -63,7 +63,16 @@ async function extractArticle(page: Page): Promise<ArticleExtract> {
       document.querySelector('article') ??
       document.querySelector('main') ??
       document.body;
-    const content = (container?.textContent ?? '').trim();
+
+    // Walk <p> elements and trim each paragraph individually to avoid capturing
+    // raw whitespace produced by CSS-laid-out HTML (flex/grid containers emit
+    // long runs of spaces/tabs between text nodes when using textContent).
+    const paragraphs = Array.from(container?.querySelectorAll('p') ?? [])
+      .map((paragraph) => (paragraph.textContent ?? '').trim())
+      .filter((text) => text.length > 0);
+    const content = paragraphs.length > 0
+      ? paragraphs.join('\n\n')
+      : (container?.textContent ?? '').trim();
 
     const publishedMeta = document
       .querySelector('meta[property="article:published_time"]')
