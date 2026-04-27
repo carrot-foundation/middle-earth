@@ -12,6 +12,12 @@ const MAX_ARTICLE_AGE_DAYS = 30;
 const CANDIDATE_POOL_SIZE = 15;
 const MAX_EXCERPT_LENGTH = 400;
 
+export const TRELLIS_CONTENT_SELECTORS = [
+  '.post-content',
+  'article',
+  'main',
+] as const;
+
 interface SearchLink {
   readonly url: string;
   readonly title: string;
@@ -58,21 +64,25 @@ async function extractSearchLinks(page: Page): Promise<SearchLink[]> {
 }
 
 async function extractArticle(page: Page): Promise<ArticleExtract> {
-  return page.evaluate(() => {
-    const container =
-      document.querySelector('article') ??
-      document.querySelector('main') ??
-      document.body;
+  return page.evaluate((selectors: readonly string[]) => {
+    // Trellis wraps the article header, byline, image caption, author bio,
+    // newsletter signup, "Featured Reports", "Coming up" and "Recommended"
+    // widgets all inside <article class="post-type-post">. Scoping to
+    // .post-content (the body div) is what keeps sidebar paragraphs out.
+    let container: Element | null = null;
+    for (const selector of selectors) {
+      container = document.querySelector(selector);
+      if (container) break;
+    }
+    container = container ?? document.body;
 
-    // Walk <p> elements and trim each paragraph individually to avoid capturing
-    // raw whitespace produced by CSS-laid-out HTML (flex/grid containers emit
-    // long runs of spaces/tabs between text nodes when using textContent).
-    const paragraphs = Array.from(container?.querySelectorAll('p') ?? [])
-      .map((paragraph) => (paragraph.textContent ?? '').trim())
+    // Collapse internal whitespace runs so any sidebar <p> that slips through
+    // a future selector change cannot reintroduce tab/space blocks.
+    const paragraphs = Array.from(container.querySelectorAll('p'))
+      .map((paragraph) => (paragraph.textContent ?? '').replace(/\s+/g, ' ').trim())
       .filter((text) => text.length > 0);
-    const content = paragraphs.length > 0
-      ? paragraphs.join('\n\n')
-      : (container?.textContent ?? '').trim();
+    const fallback = (container.textContent ?? '').replace(/\s+/g, ' ').trim();
+    const content = paragraphs.length > 0 ? paragraphs.join('\n\n') : fallback;
 
     const publishedMeta = document
       .querySelector('meta[property="article:published_time"]')
@@ -85,7 +95,7 @@ async function extractArticle(page: Page): Promise<ArticleExtract> {
     const author = authorMeta || (bylineEl?.textContent ?? '').trim();
 
     return { content, date, author };
-  });
+  }, [...TRELLIS_CONTENT_SELECTORS]);
 }
 
 async function extractListing(page: Page): Promise<ListingItem[]> {
