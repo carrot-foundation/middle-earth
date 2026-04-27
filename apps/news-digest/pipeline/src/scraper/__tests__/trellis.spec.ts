@@ -13,7 +13,7 @@ vi.mock('../../ai/trellis-curator.js', () => ({
 
 import { chromium } from 'playwright';
 import { curateTrellisArticles } from '../../ai/trellis-curator.js';
-import { scrapeTrellis } from '../trellis.js';
+import { scrapeTrellis, TRELLIS_CONTENT_SELECTORS } from '../trellis.js';
 
 const TODAY_ISO = new Date().toISOString().slice(0, 10);
 
@@ -246,6 +246,17 @@ describe('scrapeTrellis', () => {
     expect(themeNames).toContain('Carbon Markets');
     expect(themeNames).toContain('Methane Detection & MRV');
     expect(themeNames).toContain('Verification & Auditing'); // monthly theme, typically not eligible daily
+  });
+
+  it('prefers .post-content over <article> to keep sidebar/author/related widgets out of the body (regression)', () => {
+    // <article class="post-type-post"> on Trellis wraps the article header,
+    // byline, image caption, author bio, newsletter signup, "Featured Reports",
+    // "Coming up" and "Recommended" widgets. Scoping to .post-content first is
+    // what isolates the actual article body. If this list ever drops or
+    // demotes .post-content, articles will again render with sidebar bleed and
+    // huge whitespace runs (the "black areas" bug in Notion).
+    expect(TRELLIS_CONTENT_SELECTORS[0]).toBe('.post-content');
+    expect(TRELLIS_CONTENT_SELECTORS).toContain('article');
   });
 
   it('produces clean paragraph text from CSS-layout whitespace (regression)', async () => {
