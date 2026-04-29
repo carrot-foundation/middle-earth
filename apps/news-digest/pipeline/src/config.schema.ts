@@ -41,7 +41,7 @@ export type Env = z.infer<typeof envSchema>;
 
 export const processedStateSchema = z.object({
   processedArticles: z.array(z.object({
-    source: z.enum(['carbon-pulse', 'esgnews', 'trellis']).default('carbon-pulse'),
+    source: z.enum(['carbon-pulse', 'esgnews', 'trellis', 'a16z-crypto']).default('carbon-pulse'),
     url: z.string().url(),
     title: z.string(),
     date: z.string(),
