@@ -218,49 +218,45 @@ export async function runPipeline(config: PipelineConfig): Promise<PipelineResul
   console.log(`Eligible themes: ${eligibleThemes.map((t) => t.name).join(', ')}`);
 
   if (eligibleThemes.length === 0) {
-    console.log('No eligible themes today.');
-    return {
-      steps: [], articlesScraped: 0, articlesBySource: {}, deduped: 0,
-      claudeProcessed: 0, claudeFallbacks: 0, notionCreated: 0, notionFailed: 0,
-      emailDraftCreated: false, slackPosted: false, errors: [],
-    };
+    console.log('No eligible themes today. Skipping theme-driven sources, continuing with Substack.');
   }
 
-  // Step 3: Scrape Carbon Pulse
-  console.log('Step 3: Scraping Carbon Pulse...');
+  // Steps 3-5: Theme-driven sources (gated)
   let cpArticles: RawArticle[] = [];
-  try {
-    cpArticles = await scrapeCarbonPulse(eligibleThemes, processedUrls, config.secrets.carbonPulse, config.secrets.proxy);
-    console.log(`Carbon Pulse: ${cpArticles.length} articles`);
-  } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : 'unknown';
-    errors.push(`Carbon Pulse scraping failed: ${msg}`);
-    console.error(errors[errors.length - 1]);
-  }
-
-  // Step 4: Scrape ESG News
-  console.log('Step 4: Scraping ESG News...');
   let esgArticles: RawArticle[] = [];
-  try {
-    const cpTitles = cpArticles.map((a) => a.title);
-    esgArticles = await scrapeEsgNews(eligibleThemes, processedUrls, cpTitles);
-    console.log(`ESG News: ${esgArticles.length} articles`);
-  } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : 'unknown';
-    errors.push(`ESG News scraping failed: ${msg}`);
-    console.error(errors[errors.length - 1]);
-  }
-
-  // Step 5: Scrape Trellis
-  console.log('Step 5: Scraping Trellis...');
   let trellisArticles: RawArticle[] = [];
-  try {
-    trellisArticles = await scrapeTrellis(eligibleThemes, processedUrls, config.secrets.anthropicApiKey);
-    console.log(`Trellis: ${trellisArticles.length} articles`);
-  } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : 'unknown';
-    errors.push(`Trellis scraping failed: ${msg}`);
-    console.error(errors[errors.length - 1]);
+
+  if (eligibleThemes.length > 0) {
+    console.log('Step 3: Scraping Carbon Pulse...');
+    try {
+      cpArticles = await scrapeCarbonPulse(eligibleThemes, processedUrls, config.secrets.carbonPulse, config.secrets.proxy);
+      console.log(`Carbon Pulse: ${cpArticles.length} articles`);
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : 'unknown';
+      errors.push(`Carbon Pulse scraping failed: ${msg}`);
+      console.error(errors[errors.length - 1]);
+    }
+
+    console.log('Step 4: Scraping ESG News...');
+    try {
+      const cpTitles = cpArticles.map((a) => a.title);
+      esgArticles = await scrapeEsgNews(eligibleThemes, processedUrls, cpTitles);
+      console.log(`ESG News: ${esgArticles.length} articles`);
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : 'unknown';
+      errors.push(`ESG News scraping failed: ${msg}`);
+      console.error(errors[errors.length - 1]);
+    }
+
+    console.log('Step 5: Scraping Trellis...');
+    try {
+      trellisArticles = await scrapeTrellis(eligibleThemes, processedUrls, config.secrets.anthropicApiKey);
+      console.log(`Trellis: ${trellisArticles.length} articles`);
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : 'unknown';
+      errors.push(`Trellis scraping failed: ${msg}`);
+      console.error(errors[errors.length - 1]);
+    }
   }
 
   // Step 5b: Scrape Substack publications (always runs — no theme filter)
