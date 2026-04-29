@@ -53,6 +53,11 @@ describe('stripHtml', () => {
   it('decodes hex numeric HTML entities', () => {
     expect(stripHtml('Em dash &#x2014; here')).toBe('Em dash — here');
   });
+
+  it('preserves out-of-range numeric entities verbatim instead of throwing', () => {
+    expect(stripHtml('Decimal overflow &#9999999999; survives')).toBe('Decimal overflow &#9999999999; survives');
+    expect(stripHtml('Hex overflow &#x110000; survives')).toBe('Hex overflow &#x110000; survives');
+  });
 });
 
 describe('scrapeSubstack — happy path', () => {

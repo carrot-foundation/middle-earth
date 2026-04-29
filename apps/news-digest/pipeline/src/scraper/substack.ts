@@ -29,11 +29,15 @@ export function stripHtml(html: string): string {
     .replace(/&#x27;/g, "'")
     .replace(/&#(\d+);/g, (match, dec: string) => {
       const code = Number.parseInt(dec, 10);
-      return Number.isFinite(code) ? String.fromCodePoint(code) : match;
+      return Number.isInteger(code) && code >= 0 && code <= 0x10ffff
+        ? String.fromCodePoint(code)
+        : match;
     })
     .replace(/&#x([0-9a-f]+);/gi, (match, hex: string) => {
       const code = Number.parseInt(hex, 16);
-      return Number.isFinite(code) ? String.fromCodePoint(code) : match;
+      return Number.isInteger(code) && code >= 0 && code <= 0x10ffff
+        ? String.fromCodePoint(code)
+        : match;
     })
     .replace(/[ \t]+/g, ' ')
     .replace(/\n[ \t]+/g, '\n')
