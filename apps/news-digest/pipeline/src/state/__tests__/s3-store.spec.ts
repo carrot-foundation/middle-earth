@@ -84,6 +84,36 @@ describe('S3Store', () => {
     expect(state.processedArticles[0]?.source).toBe('trellis');
   });
 
+  it('loadState accepts a16z-crypto-sourced articles in existing state', async () => {
+    const existingState = {
+      processedArticles: [{
+        source: 'a16z-crypto',
+        url: 'https://a16zcrypto.substack.com/p/agents',
+        title: 'Agents are starting to operate real systems',
+        date: '2026-04-18',
+        author: 'a16z crypto',
+        mainTheme: 'Industry Intelligence',
+        categories: '',
+        location: '',
+        summary: 'Summary',
+        keyPoints: [],
+        segment: 'Big Tech',
+        fullContent: '',
+        markdownFile: 'agents.md',
+        notionPageId: null,
+        processedAt: '2026-04-18T10:00:00Z',
+        status: 'markdown-only',
+      }],
+      themeLastProcessed: {},
+    };
+    mockSend.mockResolvedValueOnce({
+      Body: { transformToString: () => Promise.resolve(JSON.stringify(existingState)) },
+    });
+    const state = await store.loadState('state.json');
+    expect(state.processedArticles).toHaveLength(1);
+    expect(state.processedArticles[0]?.source).toBe('a16z-crypto');
+  });
+
   it('saveState uploads JSON to S3', async () => {
     mockSend.mockResolvedValueOnce({});
     const state = { processedArticles: [], themeLastProcessed: {}, slackPostedAt: '' };

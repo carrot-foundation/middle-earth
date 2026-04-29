@@ -1,5 +1,5 @@
 export interface RawArticle {
-  readonly source: 'carbon-pulse' | 'esgnews' | 'trellis';
+  readonly source: 'carbon-pulse' | 'esgnews' | 'trellis' | 'a16z-crypto';
   readonly url: string;
   readonly title: string;
   readonly date: string;
@@ -11,7 +11,7 @@ export interface RawArticle {
 }
 
 export interface ProcessedArticle {
-  readonly source: 'carbon-pulse' | 'esgnews' | 'trellis';
+  readonly source: 'carbon-pulse' | 'esgnews' | 'trellis' | 'a16z-crypto';
   readonly url: string;
   readonly title: string;
   readonly date: string;
@@ -100,4 +100,10 @@ export interface Secrets {
     readonly clientSecret: string;
     readonly refreshToken: string;
   };
+}
+
+export interface SubstackPublication {
+  readonly name: string;
+  readonly source: RawArticle['source'];
+  readonly feedUrl: string;
 }

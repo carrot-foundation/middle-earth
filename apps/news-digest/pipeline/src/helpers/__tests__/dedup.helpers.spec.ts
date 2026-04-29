@@ -96,4 +96,17 @@ describe('deduplicateArticles', () => {
     expect(kept).toHaveLength(1);
     expect(removed).toHaveLength(1);
   });
+
+  it('preserves a16z-crypto articles when interleaved with other sources (no NaN sort)', () => {
+    const articles = [
+      stubArticle({ source: 'a16z-crypto', url: 'https://a16zcrypto.substack.com/p/agents', title: 'Agents are starting to operate real systems' }),
+      stubArticle({ source: 'carbon-pulse', url: 'https://carbon-pulse.com/methane/', title: 'Methane policy update' }),
+      stubArticle({ source: 'a16z-crypto', url: 'https://a16zcrypto.substack.com/p/stablecoins', title: 'Stablecoins are going local' }),
+      stubArticle({ source: 'esgnews', url: 'https://esgnews.com/eu-carbon/', title: 'EU carbon market analysis' }),
+    ];
+    const { kept, removed } = deduplicateArticles(articles);
+    expect(kept).toHaveLength(4);
+    expect(removed).toHaveLength(0);
+    expect(kept.map((a) => a.source).sort()).toEqual(['a16z-crypto', 'a16z-crypto', 'carbon-pulse', 'esgnews']);
+  });
 });

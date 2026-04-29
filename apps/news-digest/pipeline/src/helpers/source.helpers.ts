@@ -8,6 +8,8 @@ export function sourceLabel(source: RawArticle['source']): string {
       return 'ESG News';
     case 'trellis':
       return 'Trellis';
+    case 'a16z-crypto':
+      return 'a16z crypto';
     default: {
       const _exhaustive: never = source;
       return _exhaustive;
@@ -23,6 +25,8 @@ export function compactSourceLabel(source: RawArticle['source']): string {
       return 'ESG';
     case 'trellis':
       return 'Trellis';
+    case 'a16z-crypto':
+      return 'a16z';
     default: {
       const _exhaustive: never = source;
       return _exhaustive;
