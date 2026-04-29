@@ -53,6 +53,7 @@ export const NOTION_VALID_THEMES = [
   'Carbon Markets',
   'Extended Producer Responsibility',
   'Global Events & COP30',
+  'Industry Intelligence',
 ] as const;
 
 export const SUBSTACK_PUBLICATIONS: readonly SubstackPublication[] = [
