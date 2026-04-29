@@ -2,6 +2,7 @@ import { XMLParser } from 'fast-xml-parser';
 import type { RawArticle, SubstackPublication } from '../types.js';
 
 const RETENTION_DAYS = 90;
+const FETCH_TIMEOUT_MS = 10_000;
 
 interface RssItem {
   readonly title?: string;
@@ -26,6 +27,14 @@ export function stripHtml(html: string): string {
     .replace(/&#039;/g, "'")
     .replace(/&apos;/g, "'")
     .replace(/&#x27;/g, "'")
+    .replace(/&#(\d+);/g, (match, dec: string) => {
+      const code = Number.parseInt(dec, 10);
+      return Number.isFinite(code) ? String.fromCodePoint(code) : match;
+    })
+    .replace(/&#x([0-9a-f]+);/gi, (match, hex: string) => {
+      const code = Number.parseInt(hex, 16);
+      return Number.isFinite(code) ? String.fromCodePoint(code) : match;
+    })
     .replace(/[ \t]+/g, ' ')
     .replace(/\n[ \t]+/g, '\n')
     .replace(/\n{3,}/g, '\n\n')
@@ -44,9 +53,11 @@ async function scrapeOnePublication(
   processedUrls: ReadonlySet<string>,
   cutoffMs: number,
 ): Promise<readonly RawArticle[]> {
-  const response = await fetch(publication.feedUrl);
+  const response = await fetch(publication.feedUrl, {
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+  });
   if (!response.ok) {
-    throw new Error(`HTTP ${response.status}`);
+    throw new Error(`[${publication.name}] HTTP ${response.status} for ${publication.feedUrl}`);
   }
   const xml = await response.text();
   const parser = new XMLParser({ ignoreAttributes: true });

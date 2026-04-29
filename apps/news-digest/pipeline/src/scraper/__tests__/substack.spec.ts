@@ -45,6 +45,14 @@ describe('stripHtml', () => {
   it('returns empty string for empty input', () => {
     expect(stripHtml('')).toBe('');
   });
+
+  it('decodes decimal numeric HTML entities', () => {
+    expect(stripHtml('Smart quotes &#8220;hello&#8221; and apostrophe&#8217;s')).toBe('Smart quotes “hello” and apostrophe’s');
+  });
+
+  it('decodes hex numeric HTML entities', () => {
+    expect(stripHtml('Em dash &#x2014; here')).toBe('Em dash — here');
+  });
 });
 
 describe('scrapeSubstack — happy path', () => {
