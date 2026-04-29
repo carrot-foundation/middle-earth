@@ -22,6 +22,7 @@ const SOURCE_PRIORITY: Record<RawArticle['source'], number> = {
   'carbon-pulse': 0,
   trellis: 1,
   esgnews: 2,
+  'a16z-crypto': 3,
 };
 
 export function deduplicateArticles(articles: readonly RawArticle[]): DedupResult {
