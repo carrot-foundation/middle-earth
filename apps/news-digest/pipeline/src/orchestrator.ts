@@ -5,12 +5,13 @@ import { buildArticleMarkdown, slugify } from './helpers/markdown.helpers.js';
 import { scrapeCarbonPulse } from './scraper/carbon-pulse.js';
 import { scrapeEsgNews } from './scraper/esg-news.js';
 import { scrapeTrellis } from './scraper/trellis.js';
+import { scrapeSubstack } from './scraper/substack.js';
 import { processArticle } from './ai/article-processor.js';
 import { postSlackDigest } from './distribution/slack.js';
 import { createNotionPage } from './distribution/notion.js';
 import { createGmailDraft } from './distribution/email.js';
 import { buildEmailHtml } from './distribution/email-template.helpers.js';
-import { THEMES } from './config.constants.js';
+import { THEMES, SUBSTACK_PUBLICATIONS } from './config.constants.js';
 import type { PipelineResult, ProcessedArticle, ProcessedState, RawArticle, Secrets } from './types.js';
 
 interface PipelineConfig {
@@ -262,12 +263,24 @@ export async function runPipeline(config: PipelineConfig): Promise<PipelineResul
     console.error(errors[errors.length - 1]);
   }
 
-  const allRaw = [...cpArticles, ...esgArticles, ...trellisArticles];
+  // Step 5b: Scrape Substack publications (always runs — no theme filter)
+  console.log('Step 5b: Scraping Substack publications...');
+  let substackArticles: RawArticle[] = [];
+  try {
+    substackArticles = await scrapeSubstack(SUBSTACK_PUBLICATIONS, processedUrls);
+    console.log(`Substack: ${substackArticles.length} articles from ${SUBSTACK_PUBLICATIONS.length} publication(s)`);
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : 'unknown';
+    errors.push(`Substack scraping failed: ${msg}`);
+    console.error(errors[errors.length - 1]);
+  }
+
+  const allRaw = [...cpArticles, ...esgArticles, ...trellisArticles, ...substackArticles];
 
   if (allRaw.length === 0) {
     console.log('No articles scraped.');
     return {
-      steps: [], articlesScraped: 0, articlesBySource: { 'carbon-pulse': 0, esgnews: 0, trellis: 0 },
+      steps: [], articlesScraped: 0, articlesBySource: { 'carbon-pulse': 0, esgnews: 0, trellis: 0, 'a16z-crypto': 0 },
       deduped: 0, claudeProcessed: 0, claudeFallbacks: 0, notionCreated: 0, notionFailed: 0,
       emailDraftCreated: false, slackPosted: false, errors,
     };

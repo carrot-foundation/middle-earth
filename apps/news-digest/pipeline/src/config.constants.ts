@@ -1,4 +1,4 @@
-import type { ThemeConfig } from './types.js';
+import type { ThemeConfig, SubstackPublication } from './types.js';
 
 export const THEMES: readonly ThemeConfig[] = [
   { name: 'Methane & Super Pollutants', frequency: 'daily', carbonPulseSearchTerms: 'methane', esgNewsSearchTerms: 'methane superpollutant', trellisSearchTerms: 'methane superpollutant refrigerant' },
@@ -54,3 +54,11 @@ export const NOTION_VALID_THEMES = [
   'Extended Producer Responsibility',
   'Global Events & COP30',
 ] as const;
+
+export const SUBSTACK_PUBLICATIONS: readonly SubstackPublication[] = [
+  {
+    name: 'a16z crypto',
+    source: 'a16z-crypto',
+    feedUrl: 'https://a16zcrypto.substack.com/feed',
+  },
+];
