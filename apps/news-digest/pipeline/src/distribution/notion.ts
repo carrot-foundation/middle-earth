@@ -1,6 +1,7 @@
 import type { ProcessedArticle } from '../types.js';
 import { NOTION_VALID_THEMES } from '../config.constants.js';
 import { sourceLabel } from '../helpers/source.helpers.js';
+import { sanitizeArticleText } from '../helpers/content.helpers.js';
 
 interface NotionResult {
   readonly success: boolean;
@@ -28,6 +29,9 @@ function buildPageProperties(article: ProcessedArticle): Record<string, unknown>
     },
     Date: {
       date: { start: article.date },
+    },
+    'Source URL': {
+      url: article.url,
     },
   };
 
@@ -67,7 +71,14 @@ function buildPageContent(article: ProcessedArticle): unknown[] {
   }
 
   children.push(...chunkText(`Summary:\n${article.summary}`));
-  children.push(...chunkText(article.fullContent));
+
+  // Last-barrier sanitization: strip any scraped page chrome (nav, share
+  // buttons, <noscript> <img> markup, author bios, newsletter signups) that
+  // slipped through a scraper before it is written verbatim into Notion.
+  const cleanContent = sanitizeArticleText(article.fullContent);
+  if (cleanContent) {
+    children.push(...chunkText(cleanContent));
+  }
 
   return children;
 }

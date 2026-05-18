@@ -1,5 +1,6 @@
 import { chromium } from 'playwright';
 import type { Browser, Page } from 'playwright';
+import { sanitizeArticleText } from '../helpers/content.helpers.js';
 import type { RawArticle, ThemeConfig } from '../types.js';
 
 const SEARCH_URL = 'https://esgnews.com/?s=';
@@ -65,6 +66,14 @@ async function searchAndExtract(
         console.warn(`[ESG News] Article too old (${articleDate}), skipping: ${link.url}`);
         continue;
       }
+      // esgnews.com wraps breadcrumbs, share buttons, <noscript> <img> markup,
+      // newsletter signup and the editorial-team bio inside <article>, so the
+      // raw textContent is full of chrome. Strip it at the source.
+      const cleanContent = sanitizeArticleText(extracted.content);
+      if (!cleanContent) {
+        console.warn(`[ESG News] No article body after sanitization, skipping: ${link.url}`);
+        continue;
+      }
       articles.push({
         source: 'esgnews',
         url: link.url,
@@ -74,7 +83,7 @@ async function searchAndExtract(
         mainTheme: theme.name,
         categories: '',
         location: '',
-        fullContent: extracted.content,
+        fullContent: cleanContent,
       });
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'unknown';

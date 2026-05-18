@@ -31,9 +31,40 @@ describe('createNotionPage', () => {
     expect(body.properties['Main Theme']).toBeUndefined();
   });
 
+  it('stores the source article URL in the "Source URL" property', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ id: 'page-u' }) });
+    await createNotionPage(
+      stubProcessedArticle({ url: 'https://esgnews.com/some-article/' }),
+      'db-id',
+      'token',
+    );
+    const body = JSON.parse(mockFetch.mock.calls[0][1].body as string);
+    expect(body.properties['Source URL']).toEqual({ url: 'https://esgnews.com/some-article/' });
+  });
+
   it('returns failure on API error', async () => {
     mockFetch.mockResolvedValueOnce({ ok: false, status: 400, text: () => Promise.resolve('Bad Request') });
     const result = await createNotionPage(stubProcessedArticle(), 'db-id', 'token');
     expect(result.success).toBe(false);
+  });
+
+  it('sanitizes scraped chrome out of the page body (regression: 2026-05-18 broken articles)', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ id: 'page-x' }) });
+    const dirty =
+      'Share on Facebook\nShare on LinkedIn\n' +
+      '<img loading="lazy" src="https://esgnews.com/x.webp" srcset="https://esgnews.com/x.webp 780w" />\n' +
+      'New Zealand plans to amend the Climate Change Response Act 2002.\n' +
+      'Subscribe & Follow for Daily ESG Insights\n' +
+      'ESG News Editorial Team The ESG News Editorial Team is comprised of veteran journalists.';
+    await createNotionPage(stubProcessedArticle({ fullContent: dirty }), 'db-id', 'token');
+
+    const body = JSON.parse(mockFetch.mock.calls[0][1].body as string);
+    const rendered = JSON.stringify(body.children);
+    expect(rendered).not.toContain('<img');
+    expect(rendered).not.toContain('srcset');
+    expect(rendered).not.toContain('Share on Facebook');
+    expect(rendered).not.toContain('Subscribe & Follow');
+    expect(rendered).not.toContain('Editorial Team is comprised of');
+    expect(rendered).toContain('New Zealand plans to amend the Climate Change Response Act 2002.');
   });
 });

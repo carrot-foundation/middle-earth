@@ -1,4 +1,5 @@
 import { SEGMENTS } from '../config.constants.js';
+import { sanitizeArticleText } from '../helpers/content.helpers.js';
 import type { RawArticle } from '../types.js';
 
 const CLAUDE_API_URL = 'https://api.anthropic.com/v1/messages';
@@ -14,7 +15,7 @@ export interface ClaudeResult {
 }
 
 export function buildPrompt(article: RawArticle): string {
-  const truncatedContent = article.fullContent.slice(0, MAX_CONTENT_FOR_PROMPT);
+  const truncatedContent = sanitizeArticleText(article.fullContent).slice(0, MAX_CONTENT_FOR_PROMPT);
   const segmentList = SEGMENTS.join(', ');
 
   return `Analyze this news article and return a JSON object with exactly these fields:
@@ -35,7 +36,7 @@ Return ONLY valid JSON, no markdown fences, no explanation.`;
 }
 
 function parseFallback(article: RawArticle): ClaudeResult {
-  const summary = article.fullContent.slice(0, MAX_FALLBACK_SUMMARY).trimEnd();
+  const summary = sanitizeArticleText(article.fullContent).slice(0, MAX_FALLBACK_SUMMARY).trimEnd();
   return { summary: summary || article.title, keyPoints: [], segment: '', isFallback: true };
 }
 
