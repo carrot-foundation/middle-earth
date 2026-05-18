@@ -6,6 +6,7 @@ const EMPTY_STATE: ProcessedState = {
   processedArticles: [],
   themeLastProcessed: {},
   slackPostedAt: '',
+  emailSentAt: '',
 };
 
 export class S3Store {
