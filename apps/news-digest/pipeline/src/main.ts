@@ -29,11 +29,18 @@ async function loadSecrets(
   const gmailParsed = gmailSecretSchema.parse(JSON.parse(gmailRaw));
   const proxyParsed = proxySecretSchema.parse(JSON.parse(proxyRaw));
 
+  // Optional — not yet provisioned in every environment. Empty string when the
+  // ARN is unset; consumers (ESG News scraper) fail gracefully on empty key.
+  const firecrawlApiKey = env.FIRECRAWL_API_KEY_SECRET_ARN
+    ? await getSecret(client, env.FIRECRAWL_API_KEY_SECRET_ARN)
+    : '';
+
   return {
     carbonPulse: cpParsed,
     proxy: proxyParsed,
     slackToken,
     anthropicApiKey: apiKey,
+    firecrawlApiKey,
     notionToken,
     gmail: {
       clientId: gmailParsed.client_id,

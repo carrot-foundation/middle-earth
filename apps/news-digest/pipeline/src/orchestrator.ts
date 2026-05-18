@@ -244,7 +244,7 @@ export async function runPipeline(config: PipelineConfig): Promise<PipelineResul
     console.log('Step 4: Scraping ESG News...');
     try {
       const cpTitles = cpArticles.map((a) => a.title);
-      esgArticles = await scrapeEsgNews(eligibleThemes, processedUrls, cpTitles);
+      esgArticles = await scrapeEsgNews(eligibleThemes, processedUrls, cpTitles, config.secrets.firecrawlApiKey);
       console.log(`ESG News: ${esgArticles.length} articles`);
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : 'unknown';

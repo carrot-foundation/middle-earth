@@ -41,7 +41,8 @@
     "lorien",
     "dedups",
     "lede",
-    "ledes"
+    "ledes",
+    "jaccard"
   ],
   "dictionaries": [
     "companies",

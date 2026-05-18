@@ -95,6 +95,7 @@ export interface Secrets {
   readonly proxy: ProxyConfig;
   readonly slackToken: string;
   readonly anthropicApiKey: string;
+  readonly firecrawlApiKey: string;
   readonly notionToken: string;
   readonly gmail: {
     readonly clientId: string;
