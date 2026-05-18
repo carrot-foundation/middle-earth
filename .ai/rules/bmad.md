@@ -55,7 +55,7 @@ Inside any `_bmad-output/` you get the same five buckets:
 
 ## Commit convention
 
-Middle Earth commitlint scopes are `config | lib | release | ai`. There is no dedicated `bmad` scope. Commit BMAD artifacts under the closest existing scope (e.g. `docs(ai): ...` or `docs(lib): ...` when shipped with the code they unblock) until/unless a `bmad` scope is added to `commitlint.config`.
+Middle Earth commitlint enforces `scope-enum` = `config | lib | news-digest | release` (see `commitlint.config.mjs` — this is the source of truth; the prose in `CLAUDE.md` is inaccurate). There is no `bmad` or `ai` scope. Commit BMAD artifacts under the matching app scope when app-scoped (e.g. `docs(news-digest): ...`), or `docs(config)` for repo-wide AI/config changes, until/unless a dedicated scope is added.
 
 ## Pitfalls
 

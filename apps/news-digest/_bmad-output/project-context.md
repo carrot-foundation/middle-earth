@@ -111,7 +111,7 @@ Two Nx projects:
 - This file lives at `apps/news-digest/_bmad-output/project-context.md`. App-scoped BMAD artifacts go under `apps/<app>/_bmad-output/`, **never** at repo root. A root `_bmad-output/` (if created) is for monorepo/infra-wide artifacts only.
 - Five buckets per app: `project-context.md` + `brainstorming/ planning-artifacts/ implementation-artifacts/ research/ notes/` (each with `.gitkeep`).
 - `_bmad/` (installer scaffolding) is per-machine; only `_bmad/custom/` and `_bmad-output/` are team-shared. Regenerate this file via `bmad-generate-project-context` when the app's scope/stack shifts — stale context misleads every later session.
-- The convention is documented canonically in `.ai/rules/` and synced to adapters via `pnpm ai:sync`. Note: middle-earth commitlint scopes are `config|lib|release|ai` — there is no `bmad` scope yet (lorien has one); commit BMAD artifacts under an existing scope unless one is added.
+- The convention is documented canonically in `.ai/rules/` and synced to adapters via `pnpm ai:sync`. Note: middle-earth commitlint `scope-enum` is `config|lib|news-digest|release` (per `commitlint.config.mjs`; `CLAUDE.md` prose is wrong — it claims `ai`). There is no `bmad` scope; commit news-digest BMAD artifacts under `docs(news-digest)`.
 
 ## 9. Pointers (read on demand)
 
