@@ -28,6 +28,21 @@ describe('buildPrompt', () => {
     expect(prompt).toContain('keyPoints');
     expect(prompt).toContain('segment');
   });
+
+  it('feeds Claude sanitized content so chrome cannot skew summary/segment (regression: 2026-05-18)', () => {
+    const prompt = buildPrompt(
+      stubRawArticle({
+        fullContent:
+          'Share on Facebook\n' +
+          '<img loading="lazy" src="https://esgnews.com/x.webp" srcset="x 780w" />\n' +
+          'Indonesia plans to rehabilitate 12 million hectares of degraded land.',
+      }),
+    );
+    expect(prompt).not.toContain('<img');
+    expect(prompt).not.toContain('srcset');
+    expect(prompt).not.toContain('Share on Facebook');
+    expect(prompt).toContain('Indonesia plans to rehabilitate 12 million hectares of degraded land.');
+  });
 });
 
 describe('processArticle', () => {
@@ -61,5 +76,20 @@ describe('processArticle', () => {
     expect(result.summary).toContain('EU carbon prices rose 15%');
     expect(result.keyPoints).toEqual([]);
     expect(result.segment).toBe('');
+  });
+
+  it('produces a clean fallback summary, not scraped chrome (regression: 2026-05-18)', async () => {
+    mockFetch.mockRejectedValueOnce(new Error('API Error'));
+    const article = stubRawArticle({
+      fullContent:
+        'Share on Facebook\nShare on LinkedIn\n' +
+        '<img loading="lazy" src="https://esgnews.com/x.webp" srcset="x 780w" />\n' +
+        'New Zealand plans to amend the Climate Change Response Act 2002 to block claims.',
+    });
+    const result = await processArticle(article, 'test-api-key');
+    expect(result.isFallback).toBe(true);
+    expect(result.summary).not.toContain('<img');
+    expect(result.summary).not.toContain('Share on Facebook');
+    expect(result.summary).toContain('New Zealand plans to amend the Climate Change Response Act 2002');
   });
 });

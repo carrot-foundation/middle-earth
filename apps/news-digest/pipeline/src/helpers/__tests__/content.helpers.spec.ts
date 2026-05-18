@@ -1,0 +1,119 @@
+import { describe, it, expect } from 'vitest';
+import { sanitizeArticleText } from '../content.helpers.js';
+
+// These fixtures are trimmed copies of the *actual* broken content the
+// pipeline wrote to Notion on 2026-05-18 (ESG News article body + Carbon
+// Pulse "Daily News Ticker" listing page). They lock in the regression.
+
+describe('sanitizeArticleText', () => {
+  it('strips literal <img> markup leaked from <noscript> lazy-load wrappers', () => {
+    const raw =
+      'Indonesia plans to rehabilitate 12 million hectares of degraded land.\n' +
+      '<img loading="lazy" width="780" height="439" ' +
+      'src="https://esgnews.com/wp-content/uploads/2026/05/Indonesia.webp" ' +
+      'class="tw-absolute tw-top-0" alt="Indonesia" decoding="async" ' +
+      'srcset="https://esgnews.com/x.webp 780w" sizes="(max-width: 780px) 100vw, 780px" />\n' +
+      'Forestry officials announced the commitment.';
+
+    const cleaned = sanitizeArticleText(raw);
+
+    expect(cleaned).not.toContain('<img');
+    expect(cleaned).not.toContain('srcset');
+    expect(cleaned).not.toContain('.webp');
+    expect(cleaned).toContain('Indonesia plans to rehabilitate 12 million hectares of degraded land.');
+    expect(cleaned).toContain('Forestry officials announced the commitment.');
+  });
+
+  it('strips stray <br> and other residual HTML tags', () => {
+    const raw = 'First sentence.<br><br>Second sentence.<br /> <p>Third.</p>';
+    const cleaned = sanitizeArticleText(raw);
+    expect(cleaned).not.toMatch(/<[^>]+>/);
+    expect(cleaned).toContain('First sentence.');
+    expect(cleaned).toContain('Second sentence.');
+    expect(cleaned).toContain('Third.');
+  });
+
+  it('collapses CSS-layout whitespace/newline runs into clean paragraphs', () => {
+    const raw =
+      '      \n        \n          \n            Real article paragraph one.\n\n\n\n\n' +
+      '          \n        \n      Real article paragraph two.\n\n\n\n';
+    const cleaned = sanitizeArticleText(raw);
+    expect(cleaned).not.toMatch(/^\s{2,}/m);
+    expect(cleaned).not.toMatch(/\n{3,}/);
+    expect(cleaned).toContain('Real article paragraph one.');
+    expect(cleaned).toContain('Real article paragraph two.');
+  });
+
+  it('removes social share boilerplate (ESG News chrome)', () => {
+    const raw =
+      'Share:\nShare on Facebook\nShare on Twitter\nShare on LinkedIn\n' +
+      'New Zealand plans to amend the Climate Change Response Act 2002.';
+    const cleaned = sanitizeArticleText(raw);
+    expect(cleaned).not.toMatch(/Share on (Facebook|Twitter|LinkedIn)/);
+    expect(cleaned).not.toMatch(/^Share:/m);
+    expect(cleaned).toContain('New Zealand plans to amend the Climate Change Response Act 2002.');
+  });
+
+  it('removes the ESG News newsletter signup and editorial-team bio footer', () => {
+    const raw =
+      'The answer could affect how boards assess transition plans.\n' +
+      'Subscribe & Follow for Daily ESG Insights\n' +
+      'Stay Informed: Subscribe to the ESG News Daily Snapshot for the latest updates.\n' +
+      'Join the Conversation: Follow ESG News on LinkedIn to engage with our community.\n' +
+      'ESG News Editorial Team The ESG News Editorial Team is comprised of veteran ' +
+      'financial journalists and sustainability analysts dedicated to providing real-time reporting.';
+    const cleaned = sanitizeArticleText(raw);
+    expect(cleaned).toContain('The answer could affect how boards assess transition plans.');
+    expect(cleaned).not.toMatch(/Subscribe & Follow/);
+    expect(cleaned).not.toMatch(/Stay Informed:/);
+    expect(cleaned).not.toMatch(/Join the Conversation:/);
+    expect(cleaned).not.toMatch(/ESG News Editorial Team is comprised of/);
+  });
+
+  it('removes inline "RELATED ARTICLE:" promo lines', () => {
+    const raw =
+      'Indonesia has already issued regulations.\n' +
+      'RELATED ARTICLE: Indonesia Launches Digital Tracker for Agricultural Commodities\n' +
+      'That local element is important.';
+    const cleaned = sanitizeArticleText(raw);
+    expect(cleaned).not.toMatch(/RELATED ARTICLE:/);
+    expect(cleaned).toContain('Indonesia has already issued regulations.');
+    expect(cleaned).toContain('That local element is important.');
+  });
+
+  it('returns empty string for a Carbon Pulse listing/ticker page (no article body)', () => {
+    // The "CP Daily News Ticker" page is a date-filter calendar widget, not an
+    // article. After chrome removal nothing real remains, so the caller can skip it.
+    const raw =
+      'Click on the coloured labels below to filter by region or topic\n' +
+      'Filter by dateClear filter×See the past posts by selecting a date in the calendar below:' +
+      '(Note: No posts before 28 April 2025)\n' +
+      'January February March April May June July August September October November December\n' +
+      '2016 2017 2018 2019 2020 2021 2022 2023 2024 2025 2026';
+    expect(sanitizeArticleText(raw).trim()).toBe('');
+  });
+
+  it('preserves a real multi-paragraph article body intact', () => {
+    const raw =
+      'New Zealand’s government plans to change climate law to stop courts from finding ' +
+      'companies liable in private cases for harm linked to greenhouse gas emissions.\n\n' +
+      'Justice Minister Paul Goldsmith said the government would amend the Climate Change ' +
+      'Response Act 2002. The change would apply to both current and future court proceedings.';
+    const cleaned = sanitizeArticleText(raw);
+    expect(cleaned).toContain('New Zealand’s government plans to change climate law');
+    expect(cleaned).toContain('Justice Minister Paul Goldsmith said the government would amend');
+    expect(cleaned).toMatch(/\n\n/); // paragraph break preserved
+  });
+
+  it('is idempotent on already-clean Trellis-style content', () => {
+    const clean =
+      'Corporate demand is driving a boom in farmland carbon credits.\n\n' +
+      'Farmers are increasingly turning to carbon markets.';
+    expect(sanitizeArticleText(clean)).toBe(clean);
+  });
+
+  it('returns empty string for empty or whitespace-only input', () => {
+    expect(sanitizeArticleText('')).toBe('');
+    expect(sanitizeArticleText('   \n\t  \n ')).toBe('');
+  });
+});

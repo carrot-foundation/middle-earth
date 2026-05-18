@@ -1,5 +1,6 @@
 import { chromium } from 'playwright';
 import type { Page } from 'playwright';
+import { sanitizeArticleText } from '../helpers/content.helpers.js';
 import type { ProxyConfig, RawArticle, ThemeConfig } from '../types.js';
 
 const BASE_URL = 'https://carbon-pulse.com';
@@ -145,6 +146,14 @@ async function searchAndExtract(
         console.warn(`[Carbon Pulse] Article too old (${extracted.date}), skipping: ${link.url}`);
         continue;
       }
+      // The link selector can match listing/ticker pages (e.g. "CP Daily News
+      // Ticker") whose body is just a date-filter widget. Sanitization reduces
+      // those to empty — skip them instead of publishing a chrome-only page.
+      const cleanContent = sanitizeArticleText(extracted.content);
+      if (!cleanContent) {
+        console.warn(`[Carbon Pulse] No article body after sanitization (likely a listing page), skipping: ${link.url}`);
+        continue;
+      }
       articles.push({
         source: 'carbon-pulse',
         url: link.url,
@@ -154,7 +163,7 @@ async function searchAndExtract(
         mainTheme: theme.name,
         categories: extracted.categories,
         location: '',
-        fullContent: extracted.content,
+        fullContent: cleanContent,
       });
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'unknown';

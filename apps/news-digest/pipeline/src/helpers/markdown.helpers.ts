@@ -1,5 +1,6 @@
 import type { ProcessedArticle } from '../types.js';
 import { sourceLabel } from './source.helpers.js';
+import { sanitizeArticleText } from './content.helpers.js';
 
 const MAX_SLUG_LENGTH = 63;
 
@@ -17,6 +18,7 @@ export function slugify(title: string): string {
 export function buildArticleMarkdown(article: ProcessedArticle): string {
   const company = 'Not Applicable';
   const keyPointsList = article.keyPoints.map((p) => `- ${p}`).join('\n');
+  const cleanContent = sanitizeArticleText(article.fullContent);
 
   return `# ${article.title}
 
@@ -55,7 +57,7 @@ ${article.summary}
 
 ## Full Article Content
 
-${article.fullContent}
+${cleanContent}
 
 ---
 
