@@ -16,7 +16,7 @@ Middle Earth AI instructions for Codex, Claude, and Cursor with equal capability
 
 ## Current capability counts
 
-- Rules: 11
+- Rules: 12
 - Skills: 9
 - Agents/Roles: 2
 
@@ -34,6 +34,7 @@ Middle Earth AI instructions for Codex, Claude, and Cursor with equal capability
 
 ## Rule mappings
 
+- `rule-bmad` - BMAD tool/output split and per-app artifact convention for Middle Earth
 - `rule-branch-naming` - Git branch naming conventions aligned with Conventional Commits
 - `rule-clickup-task` - ClickUp task creation and refinement standards
 - `rule-code-comments` - Code comment guidelines for all languages
