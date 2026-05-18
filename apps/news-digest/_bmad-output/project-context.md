@@ -15,7 +15,7 @@ _Scope: `apps/news-digest/` only (`pipeline` + `infra`). Not the rest of the mid
 
 ## 1. What this is
 
-A daily news-intelligence pipeline. A scheduled **ECS Fargate** task (EventBridge cron) scrapes climate/circularity sources (Carbon Pulse, ESG News, Trellis, Substack RSS), cross-source dedups, summarizes each article with **Claude Haiku**, persists state + markdown to **S3**, then distributes to **Notion**, a **Gmail draft**, and **Slack**. There is no server and no API surface — it is a batch job that runs once per day and exits.
+A daily news-intelligence pipeline. A scheduled **ECS Fargate** task (EventBridge cron) scrapes climate/circularity sources (Carbon Pulse, ESG News, Trellis, Substack RSS), cross-source dedups, summarizes each article with **Claude Haiku**, persists state + markdown to **S3**, then distributes to **Notion**, an **auto-sent Gmail message** (`messages/send` — no manual draft step), and **Slack**. There is no server and no API surface — it is a batch job that runs once per day and exits.
 
 Two Nx projects:
 
@@ -96,7 +96,7 @@ Two Nx projects:
 
 ## 6. Distribution & flags
 
-- Channels: Notion DB (default id in `envSchema`), Gmail draft (`GMAIL_TO`), Slack (`SLACK_CHANNEL_ID`). Slack is skipped if already posted today (`slackPostedAt`).
+- Channels: Notion DB (default id in `envSchema`), Gmail auto-send to `GMAIL_TO` (`sendGmailMessage` → `users/me/messages/send`; **not** a draft), Slack (`SLACK_CHANNEL_ID`). Both Gmail and Slack are skipped if already done today — `state.emailSentAt` mirrors `slackPostedAt` to prevent a same-day re-run double-sending to the source inbox that feeds downstream email-reading integrations. Gmail send needs the `gmail.send` (or broader) OAuth scope on the Secrets Manager refresh token; a 403 "insufficient permission" means the consent must be re-granted and the refresh token rotated — not a code bug.
 - Flags (env, string `'true'`): `DRY_RUN` (skip ALL distribution), `SKIP_NOTION`, `SKIP_EMAIL`, `SKIP_SLACK`. Use `DRY_RUN=true` + a throwaway state key for safe validation; combine `SKIP_*` to exercise one channel.
 
 ## 7. Known fragilities / gotchas

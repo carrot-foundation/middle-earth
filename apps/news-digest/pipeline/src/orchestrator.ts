@@ -9,7 +9,7 @@ import { scrapeSubstack } from './scraper/substack.js';
 import { processArticle } from './ai/article-processor.js';
 import { postSlackDigest } from './distribution/slack.js';
 import { createNotionPage } from './distribution/notion.js';
-import { createGmailDraft } from './distribution/email.js';
+import { sendGmailMessage } from './distribution/email.js';
 import { buildEmailHtml } from './distribution/email-template.helpers.js';
 import { THEMES, SUBSTACK_PUBLICATIONS } from './config.constants.js';
 import type { PipelineResult, ProcessedArticle, ProcessedState, RawArticle, Secrets } from './types.js';
@@ -45,14 +45,14 @@ async function distributeArticles(
   updatedArticles: ProcessedArticle[];
   notionCreated: number;
   notionFailed: number;
-  emailDraftCreated: boolean;
+  emailSent: boolean;
   slackPosted: boolean;
 }> {
   const updatedArticles = [...articles];
 
   if (config.dryRun) {
     console.log('[DRY RUN] Skipping Notion, email, and Slack distribution.');
-    return { updatedArticles, notionCreated: 0, notionFailed: 0, emailDraftCreated: false, slackPosted: false };
+    return { updatedArticles, notionCreated: 0, notionFailed: 0, emailSent: false, slackPosted: false };
   }
 
   // Notion — parallel with concurrency limit
@@ -91,19 +91,22 @@ async function distributeArticles(
   }
 
   // Email
-  let emailDraftCreated = false;
+  let emailSent = false;
   if (config.skipEmail) {
     console.log('[SKIP] Email distribution disabled.');
+  } else if (state.emailSentAt.startsWith(today)) {
+    console.log('Digest email already sent today — skipping.');
+    emailSent = true;
   } else {
-    console.log('Creating Gmail draft...');
+    console.log('Sending digest email...');
     try {
       const html = buildEmailHtml(updatedArticles, today);
-      const emailResult = await createGmailDraft(html, config.gmailTo, today, config.secrets.gmail);
-      emailDraftCreated = emailResult.success;
+      const emailResult = await sendGmailMessage(html, config.gmailTo, today, config.secrets.gmail);
+      emailSent = emailResult.success;
       if (!emailResult.success) errors.push(`Gmail: ${emailResult.error}`);
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : 'unknown';
-      errors.push(`Gmail draft failed: ${msg}`);
+      errors.push(`Gmail send failed: ${msg}`);
     }
   }
 
@@ -126,7 +129,7 @@ async function distributeArticles(
     }
   }
 
-  return { updatedArticles, notionCreated, notionFailed, emailDraftCreated, slackPosted };
+  return { updatedArticles, notionCreated, notionFailed, emailSent, slackPosted };
 }
 
 function pruneOldArticles(articles: readonly ProcessedArticle[]): ProcessedArticle[] {
@@ -158,7 +161,7 @@ function logSummary(result: PipelineResult, isRerun: boolean): void {
     console.log(`Claude: ${result.claudeProcessed} processed, ${result.claudeFallbacks} fallbacks`);
   }
   console.log(`Notion: ${result.notionCreated} created, ${result.notionFailed} failed`);
-  console.log(`Email draft: ${result.emailDraftCreated ? 'created' : 'failed'}`);
+  console.log(`Email: ${result.emailSent ? 'sent' : 'failed'}`);
   console.log(`Slack: ${result.slackPosted ? 'posted' : 'failed'}`);
   if (result.errors.length > 0) {
     console.log(`Errors: ${result.errors.length}`);
@@ -195,6 +198,7 @@ export async function runPipeline(config: PipelineConfig): Promise<PipelineResul
       processedArticles: pruneOldArticles(mergedArticles),
       themeLastProcessed: state.themeLastProcessed,
       slackPostedAt: dist.slackPosted ? new Date().toISOString() : state.slackPostedAt,
+      emailSentAt: dist.emailSent ? new Date().toISOString() : state.emailSentAt,
     }, errors);
 
     const articlesBySource: Record<string, number> = {};
@@ -206,7 +210,7 @@ export async function runPipeline(config: PipelineConfig): Promise<PipelineResul
       steps: [], articlesScraped: todayArticles.length, articlesBySource,
       deduped: 0, claudeProcessed: 0, claudeFallbacks: 0,
       notionCreated: dist.notionCreated, notionFailed: dist.notionFailed,
-      emailDraftCreated: dist.emailDraftCreated, slackPosted: dist.slackPosted, errors,
+      emailSent: dist.emailSent, slackPosted: dist.slackPosted, errors,
     };
     logSummary(result, true);
     return result;
@@ -278,7 +282,7 @@ export async function runPipeline(config: PipelineConfig): Promise<PipelineResul
     return {
       steps: [], articlesScraped: 0, articlesBySource: { 'carbon-pulse': 0, esgnews: 0, trellis: 0, 'a16z-crypto': 0 },
       deduped: 0, claudeProcessed: 0, claudeFallbacks: 0, notionCreated: 0, notionFailed: 0,
-      emailDraftCreated: false, slackPosted: false, errors,
+      emailSent: false, slackPosted: false, errors,
     };
   }
 
@@ -353,6 +357,7 @@ export async function runPipeline(config: PipelineConfig): Promise<PipelineResul
     processedArticles: pruneOldArticles([...state.processedArticles, ...dist.updatedArticles]),
     themeLastProcessed: updatedThemes,
     slackPostedAt: dist.slackPosted ? new Date().toISOString() : state.slackPostedAt,
+    emailSentAt: dist.emailSent ? new Date().toISOString() : state.emailSentAt,
   }, errors);
 
   // Summary
@@ -365,7 +370,7 @@ export async function runPipeline(config: PipelineConfig): Promise<PipelineResul
     steps: [], articlesScraped: kept.length, articlesBySource,
     deduped: removed.length, claudeProcessed, claudeFallbacks,
     notionCreated: dist.notionCreated, notionFailed: dist.notionFailed,
-    emailDraftCreated: dist.emailDraftCreated, slackPosted: dist.slackPosted, errors,
+    emailSent: dist.emailSent, slackPosted: dist.slackPosted, errors,
   };
   logSummary(result, false);
   return result;

@@ -4,9 +4,9 @@ interface GmailCredentials {
   readonly refreshToken: string;
 }
 
-interface GmailDraftResult {
+interface GmailSendResult {
   readonly success: boolean;
-  readonly draftId?: string;
+  readonly messageId?: string;
   readonly error?: string;
 }
 
@@ -56,12 +56,12 @@ function buildRawEmail(htmlBody: string, to: string, date: string): string {
   return Buffer.from(message).toString('base64url');
 }
 
-export async function createGmailDraft(
+export async function sendGmailMessage(
   htmlBody: string,
   to: string,
   date: string,
   credentials: GmailCredentials,
-): Promise<GmailDraftResult> {
+): Promise<GmailSendResult> {
   let accessToken: string;
 
   try {
@@ -73,13 +73,13 @@ export async function createGmailDraft(
   try {
     const raw = buildRawEmail(htmlBody, to, date);
 
-    const response = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/drafts', {
+    const response = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ message: { raw } }),
+      body: JSON.stringify({ raw }),
     });
 
     if (!response.ok) {
@@ -88,7 +88,7 @@ export async function createGmailDraft(
     }
 
     const data = (await response.json()) as { id: string };
-    return { success: true, draftId: data.id };
+    return { success: true, messageId: data.id };
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : 'unknown';
     return { success: false, error: msg };

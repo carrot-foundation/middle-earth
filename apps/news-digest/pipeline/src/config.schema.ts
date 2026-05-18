@@ -60,4 +60,5 @@ export const processedStateSchema = z.object({
   })),
   themeLastProcessed: z.record(z.string(), z.string()),
   slackPostedAt: z.string().optional().default(''),
+  emailSentAt: z.string().optional().default(''),
 });

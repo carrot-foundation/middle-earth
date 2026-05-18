@@ -25,7 +25,7 @@ resource "aws_secretsmanager_secret" "notion_token" {
 resource "aws_secretsmanager_secret" "gmail_credentials" {
   name        = "${var.app_name}/gmail-credentials"
   description = "Gmail OAuth2 credentials"
-  tags        = { Name = "${var.app_name}/gmail-credentials", Purpose = "Gmail draft creation" }
+  tags        = { Name = "${var.app_name}/gmail-credentials", Purpose = "Gmail digest auto-send" }
 }
 
 resource "aws_secretsmanager_secret" "proxy" {

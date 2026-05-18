@@ -33,6 +33,7 @@ export interface ProcessedState {
   readonly processedArticles: readonly ProcessedArticle[];
   readonly themeLastProcessed: Readonly<Record<string, string>>;
   readonly slackPostedAt: string;
+  readonly emailSentAt: string;
 }
 
 export type ThemeFrequency = 'daily' | 'weekly' | 'monthly';
@@ -75,7 +76,7 @@ export interface PipelineResult {
   readonly claudeFallbacks: number;
   readonly notionCreated: number;
   readonly notionFailed: number;
-  readonly emailDraftCreated: boolean;
+  readonly emailSent: boolean;
   readonly slackPosted: boolean;
   readonly errors: readonly string[];
 }
