@@ -92,6 +92,32 @@ async function refreshAccessToken(clientId: string, clientSecret: string, refres
   return ((await response.json()) as { access_token: string }).access_token;
 }
 
+/**
+ * Returns the recipient as a single normalized bare email address, or throws.
+ * Rejects comma-separated lists, display names ("Name <addr>"), surrounding or
+ * embedded whitespace, casing variants of the prod list, and anything that is
+ * not exactly one address — so the prod list cannot slip through `to`.
+ */
+function safeTestRecipient(rawValue: string): string {
+  const collapsed = rawValue.trim().replace(/\s+/g, ' ');
+
+  if (collapsed.includes(',')) {
+    throw new Error(`Test recipient must be a single address, got a list: "${rawValue}".`);
+  }
+  if (/[<>]/.test(collapsed) || collapsed.includes(' ')) {
+    throw new Error(`Test recipient must be a bare email address (no display name): "${rawValue}".`);
+  }
+
+  const address = collapsed.toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address)) {
+    throw new Error(`Test recipient is not a valid email address: "${rawValue}".`);
+  }
+  if (address === PROD_LIST.toLowerCase()) {
+    throw new Error(`Refusing to send the smoke test to the production list (${PROD_LIST}).`);
+  }
+  return address;
+}
+
 async function main(): Promise<void> {
   const today = new Date().toISOString().slice(0, 10);
 
@@ -107,11 +133,7 @@ async function main(): Promise<void> {
 
   const accessToken = await refreshAccessToken(credentials.clientId, credentials.clientSecret, credentials.refreshToken);
   const ownEmail = await resolveOwnEmail(accessToken);
-  const to = process.env.TEST_EMAIL_TO ?? ownEmail;
-
-  if (to === PROD_LIST) {
-    throw new Error(`Refusing to send the smoke test to the production list (${PROD_LIST}).`);
-  }
+  const to = safeTestRecipient(process.env.TEST_EMAIL_TO ?? ownEmail);
 
   const html = buildEmailHtml(syntheticArticles(today), today);
 
