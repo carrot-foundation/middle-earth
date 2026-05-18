@@ -30,7 +30,7 @@ Claude adapter for Middle Earth AI instructions. This file is generated from can
 
 ## Capability counts
 
-- Rules: 11
+- Rules: 12
 - Skills: 9
 - Agents/Roles: 2
 

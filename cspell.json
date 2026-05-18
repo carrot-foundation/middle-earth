@@ -36,7 +36,12 @@
     "xvfb",
     "Xvfb",
     "KHTML",
-    "unstub"
+    "unstub",
+    "bmad",
+    "lorien",
+    "dedups",
+    "lede",
+    "ledes"
   ],
   "dictionaries": [
     "companies",
