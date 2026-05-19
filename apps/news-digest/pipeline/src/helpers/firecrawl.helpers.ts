@@ -80,27 +80,24 @@ async function firecrawlPost(
 
 /**
  * Web search via Firecrawl. Returns `{ url, title }` for each web result,
- * dropping entries missing either field. Pass `tbs` (e.g. `'qdr:m'` for past
- * month) to bias results toward recency — without it the search returns
- * mostly evergreen/stale pages that the per-scraper freshness filter then
- * rejects, gutting recall (verified in the 2026-05-19 isolated ECS run).
+ * dropping entries missing either field.
+ *
+ * Recency: the Google-style `tbs=qdr:*` filter was tried and dropped — for
+ * `site:esgnews.com` / `site:trellis.net` queries it excluded **all** results
+ * (Firecrawl honors `tbs` only when the underlying index has a clean
+ * publish date; both publishers lack one, so the filter is binary-fatal).
+ * A hybrid listing-page scrape will replace it; until then recency relies
+ * solely on the per-scraper `MAX_ARTICLE_AGE_DAYS` filter.
  */
 export async function firecrawlSearch(
   query: string,
   apiKey: string,
   limit = 10,
-  tbs?: string,
 ): Promise<FirecrawlSearchResult[]> {
-  const body: Record<string, unknown> = {
-    query,
-    limit,
-    sources: [{ type: 'web' }],
-  };
-  if (tbs) body['tbs'] = tbs;
   const data = await firecrawlPost(
     '/search',
     apiKey,
-    body,
+    { query, limit, sources: [{ type: 'web' }] },
     SEARCH_TIMEOUT_MS + CLIENT_TIMEOUT_BUFFER_MS,
   );
 

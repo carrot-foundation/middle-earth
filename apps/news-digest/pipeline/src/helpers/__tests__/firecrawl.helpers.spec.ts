@@ -63,25 +63,6 @@ describe('firecrawlSearch', () => {
     });
   });
 
-  it('includes the tbs time filter in the body when provided (recency bias)', async () => {
-    const fetchSpy = vi.fn(async () => ({
-      ok: true,
-      status: 200,
-      json: async () => ({ data: { web: [] } }),
-    }));
-    vi.stubGlobal('fetch', fetchSpy);
-
-    await firecrawlSearch('methane', 'fc-key', 5, 'qdr:m');
-
-    const [, init] = fetchSpy.mock.calls[0]!;
-    expect(JSON.parse(init.body)).toEqual({
-      query: 'methane',
-      limit: 5,
-      sources: [{ type: 'web' }],
-      tbs: 'qdr:m',
-    });
-  });
-
   it('throws FirecrawlError without an API key (no network call)', async () => {
     const fetchSpy = vi.fn();
     vi.stubGlobal('fetch', fetchSpy);
