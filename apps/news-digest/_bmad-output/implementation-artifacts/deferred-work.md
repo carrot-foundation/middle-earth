@@ -38,10 +38,12 @@ Pre-existing issues surfaced incidentally during review — not caused by the wo
 
 ## `parseDate` UTC-slice off-by-one at the freshness boundary
 
-- **Surfaced by:** blind/edge review (2026-05-19); shared with `esg-news.ts`
-  (same `.toISOString().slice(0,10)` round-trip) — not a Trellis regression.
-- **Issue:** a timezone-shifted publish time can shift the date-only string by
-  a day, flipping inclusion at exactly `MAX_ARTICLE_AGE_DAYS`.
-- **Suggested fix:** compare timestamps from the raw published time instead of
-  round-tripping through a date-only string; add 29/30/31-day boundary tests.
-  Apply to esg + trellis together.
+- **Surfaced by:** blind/edge review (2026-05-19) — not a Trellis regression.
+- **Status update (#32):** the duplicated per-scraper `parseDate` was extracted
+  to the shared `helpers/date.helpers.ts` (esg-news + trellis now import it),
+  so this is now fixable in **one place** rather than "esg + trellis together".
+- **Issue:** a timezone-shifted publish time can shift the UTC-sliced date by a
+  day, flipping inclusion at exactly `MAX_ARTICLE_AGE_DAYS`.
+- **Suggested fix:** in `helpers/date.helpers.ts`, compare timestamps from the
+  raw published time instead of round-tripping through a UTC date-only string;
+  add 29/30/31-day boundary tests in `date.helpers.spec.ts`.

@@ -1,6 +1,7 @@
 import { THEMES } from '../config.constants.js';
 import { curateTrellisArticles, type TrellisCandidate } from '../ai/trellis-curator.js';
 import { sanitizeArticleText } from '../helpers/content.helpers.js';
+import { parseDate } from '../helpers/date.helpers.js';
 import { FirecrawlError, firecrawlScrape, firecrawlSearch } from '../helpers/firecrawl.helpers.js';
 import type { RawArticle, ThemeConfig } from '../types.js';
 
@@ -12,13 +13,6 @@ const MAX_EXCERPT_LENGTH = 400;
 // The curator (not a per-theme query) decides which of these are worth the
 // digest; keep the discovery query broad and recency-biased, scoped to Trellis.
 const CURATION_QUERY = 'site:trellis.net climate sustainability decarbonization circular economy';
-
-function parseDate(raw: string): string {
-  if (!raw) return '';
-  const parsed = new Date(raw);
-  if (Number.isNaN(parsed.getTime())) return '';
-  return parsed.toISOString().slice(0, 10);
-}
 
 // Trellis articles live at trellis.net/article/...; the old Playwright code only
 // ever followed `a[href*="/article/"]`. Require both an in-domain host and the

@@ -1,17 +1,11 @@
 import { sanitizeArticleText } from '../helpers/content.helpers.js';
+import { parseDate } from '../helpers/date.helpers.js';
 import { FirecrawlError, firecrawlScrape, firecrawlSearch } from '../helpers/firecrawl.helpers.js';
 import type { RawArticle, ThemeConfig } from '../types.js';
 
 const MAX_ARTICLES_PER_THEME = 2;
 const MAX_ARTICLE_AGE_DAYS = 30;
 const SEARCH_LIMIT = 10;
-
-function parseDate(raw: string): string {
-  if (!raw) return '';
-  const parsed = new Date(raw);
-  if (Number.isNaN(parsed.getTime())) return '';
-  return parsed.toISOString().slice(0, 10);
-}
 
 function isDuplicateOfCarbonPulse(title: string, cpTitles: readonly string[]): boolean {
   const lowerTitle = title.toLowerCase();
