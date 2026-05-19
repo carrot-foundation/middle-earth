@@ -22,3 +22,31 @@ export function getEligibleThemes(
     return daysSince >= minDays;
   });
 }
+
+/**
+ * Parse the comma-separated `THEMES_FILTER` env var into a normalized set of
+ * theme names. Whitespace around each name is trimmed; empty entries dropped.
+ * Returns `undefined` when the input is unset/blank, signalling "no filter".
+ *
+ * Operational knob for cheap one-theme validation runs — `daily` themes are
+ * unconditionally eligible (`minDays === 0` in `getEligibleThemes`), so state
+ * pre-seeding alone cannot drop below 5 themes.
+ */
+export function parseThemesFilter(raw: string | undefined): Set<string> | undefined {
+  if (!raw) return undefined;
+  const names = raw.split(',').map((name) => name.trim()).filter((name) => name.length > 0);
+  if (names.length === 0) return undefined;
+  return new Set(names);
+}
+
+/**
+ * Restrict `themes` to those whose name appears in `allowed`. When `allowed`
+ * is `undefined` the input list is returned unchanged (no filter active).
+ */
+export function applyThemesFilter(
+  themes: readonly ThemeConfig[],
+  allowed: ReadonlySet<string> | undefined,
+): ThemeConfig[] {
+  if (!allowed) return [...themes];
+  return themes.filter((theme) => allowed.has(theme.name));
+}

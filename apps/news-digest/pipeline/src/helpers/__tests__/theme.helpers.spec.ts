@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getEligibleThemes } from '../theme.helpers.js';
+import { applyThemesFilter, getEligibleThemes, parseThemesFilter } from '../theme.helpers.js';
 import { THEMES } from '../../config.constants.js';
 
 describe('getEligibleThemes', () => {
@@ -38,5 +38,52 @@ describe('getEligibleThemes', () => {
   it('returns weekly theme when never processed before', () => {
     const result = getEligibleThemes(THEMES, {}, today);
     expect(result.find((t) => t.name === 'Carbon Markets')).toBeDefined();
+  });
+});
+
+describe('parseThemesFilter', () => {
+  it('returns undefined for unset / empty input', () => {
+    expect(parseThemesFilter(undefined)).toBeUndefined();
+    expect(parseThemesFilter('')).toBeUndefined();
+    expect(parseThemesFilter('   ')).toBeUndefined();
+    expect(parseThemesFilter(',, ,')).toBeUndefined();
+  });
+
+  it('parses a comma-separated list, trimming whitespace', () => {
+    expect(parseThemesFilter('Carrot Mentions')).toEqual(new Set(['Carrot Mentions']));
+    expect(parseThemesFilter('Carrot Mentions, Carbon Markets')).toEqual(
+      new Set(['Carrot Mentions', 'Carbon Markets']),
+    );
+    expect(parseThemesFilter('  Carrot Mentions  ,  Carbon Markets  ')).toEqual(
+      new Set(['Carrot Mentions', 'Carbon Markets']),
+    );
+  });
+
+  it('drops empty entries from a malformed list', () => {
+    expect(parseThemesFilter('Carrot Mentions,,Carbon Markets,')).toEqual(
+      new Set(['Carrot Mentions', 'Carbon Markets']),
+    );
+  });
+});
+
+describe('applyThemesFilter', () => {
+  it('returns the input unchanged when no filter is provided', () => {
+    const result = applyThemesFilter(THEMES, undefined);
+    expect(result).toEqual([...THEMES]);
+  });
+
+  it('keeps only themes whose name is in the allowlist', () => {
+    const result = applyThemesFilter(THEMES, new Set(['Carrot Mentions']));
+    expect(result.map((theme) => theme.name)).toEqual(['Carrot Mentions']);
+  });
+
+  it('ignores unknown names without erroring', () => {
+    const result = applyThemesFilter(THEMES, new Set(['Not A Real Theme', 'Carbon Markets']));
+    expect(result.map((theme) => theme.name)).toEqual(['Carbon Markets']);
+  });
+
+  it('returns empty when the allowlist matches no themes', () => {
+    const result = applyThemesFilter(THEMES, new Set(['Nothing Matches']));
+    expect(result).toEqual([]);
   });
 });
