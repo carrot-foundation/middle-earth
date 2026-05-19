@@ -55,6 +55,7 @@ resource "aws_iam_role_policy" "ecs_task" {
           aws_secretsmanager_secret.notion_token.arn,
           aws_secretsmanager_secret.gmail_credentials.arn,
           aws_secretsmanager_secret.proxy.arn,
+          aws_secretsmanager_secret.firecrawl_api_key.arn,
         ]
       },
       {

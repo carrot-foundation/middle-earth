@@ -33,3 +33,9 @@ resource "aws_secretsmanager_secret" "proxy" {
   description = "Residential proxy credentials for Cloudflare bypass"
   tags        = { Name = "${var.app_name}/proxy", Purpose = "Proxy for web scraping" }
 }
+
+resource "aws_secretsmanager_secret" "firecrawl_api_key" {
+  name        = "${var.app_name}/firecrawl-api-key"
+  description = "Firecrawl API key (raw fc- token) for ESG News / Trellis scraping"
+  tags        = { Name = "${var.app_name}/firecrawl-api-key", Purpose = "Firecrawl scraping auth" }
+}
