@@ -12,30 +12,34 @@ const MAX_ARTICLE_AGE_DAYS = 30;
 const LISTING_URL_BASE = 'https://esgnews.com/?s=';
 
 // ESG News article permalinks are slug-only at the root (`/some-slug/`).
-// These prefixes mark tag/category/author/pagination/region/static-page
-// routes that the search page also links to — exclude them so we don't
-// waste credits scraping a non-article page (the old `/search` flow
-// burnt 16 scrapes on these in the 2026-05-19 validation run). All
-// entries end with `/` so they never accidentally swallow a real slug
-// (e.g. `/feed` would have excluded a legitimate `/feedback-policy/`).
-const ESG_INDEX_PATH_PREFIXES: readonly string[] = [
-  '/tag/',
-  '/category/',
-  '/author/',
-  '/page/',
-  '/esg-europe/',
-  '/esg-americas/',
-  '/esg-africa/',
-  '/esg-asia-pacific/',
-  '/feed/',
-  '/wp-admin/',
-  '/wp-content/',
-  '/wp-json/',
-  '/about/',
-  '/contact/',
-  '/subscribe/',
-  '/authors/',
-];
+// These first-path-segments mark tag/category/author/pagination/region/
+// static-page routes that the search page also links to — exclude them so
+// we don't waste credits scraping a non-article page (the old `/search`
+// flow burnt 16 scrapes on these in the 2026-05-19 validation run).
+//
+// Matching on the FIRST segment (not a prefix string) handles trailing-slash
+// variants uniformly: `/about`, `/about/`, and `/about/us/` all canonicalize
+// to first-segment `'about'`. The earlier prefix-list approach required
+// every entry to end with `/`, and a single missing slash silently let the
+// no-trailing-slash form through (cursor-bot finding on PR #36).
+const ESG_INDEX_FIRST_SEGMENTS: ReadonlySet<string> = new Set([
+  'tag',
+  'category',
+  'author',
+  'page',
+  'esg-europe',
+  'esg-americas',
+  'esg-africa',
+  'esg-asia-pacific',
+  'feed',
+  'wp-admin',
+  'wp-content',
+  'wp-json',
+  'about',
+  'contact',
+  'subscribe',
+  'authors',
+]);
 
 function isEsgNewsArticleUrl(url: string): boolean {
   let parsed: URL;
@@ -46,14 +50,13 @@ function isEsgNewsArticleUrl(url: string): boolean {
   }
   const host = parsed.hostname.toLowerCase();
   if (host !== 'esgnews.com' && !host.endsWith('.esgnews.com')) return false;
-  const path = parsed.pathname.toLowerCase();
-  if (ESG_INDEX_PATH_PREFIXES.some((prefix) => path.startsWith(prefix))) return false;
-  // Article permalinks are exactly one path segment under root (`/slug/`).
-  // Multi-segment paths (`/tag/x/`, `/esg-europe/page/12/`) are already
-  // rejected above; this catches future index types we haven't enumerated
-  // yet (e.g. a hypothetical `/topic/methane/`) without us having to keep
-  // maintaining the prefix list.
-  const segments = path.split('/').filter((segment) => segment.length > 0);
+  const segments = parsed.pathname.toLowerCase().split('/').filter((segment) => segment.length > 0);
+  if (segments.length === 0) return false;
+  if (ESG_INDEX_FIRST_SEGMENTS.has(segments[0]!)) return false;
+  // Article permalinks are exactly one segment under root (`/slug/`).
+  // Multi-segment paths (`/topic/methane/`, future index types) are
+  // rejected so we don't need to keep extending the exclusion set
+  // ahead of every CMS change.
   return segments.length === 1;
 }
 

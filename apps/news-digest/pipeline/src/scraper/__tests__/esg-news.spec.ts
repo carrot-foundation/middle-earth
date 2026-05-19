@@ -177,6 +177,55 @@ describe('scrapeEsgNews', () => {
     expect(result[0]!.url).toBe('https://esgnews.com/real-article-slug/');
   });
 
+  it('filters index paths regardless of trailing slash (no-trailing-slash variants too)', async () => {
+    // Cursor bot finding on PR #36: prefix-list with trailing `/` would let
+    // `https://esgnews.com/about` (no slash) through. First-segment matching
+    // catches both `/about` and `/about/`.
+    const theme = stubTheme();
+    const scrapedUrls: string[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (_url: string, init: { body: string }) => {
+        const body = JSON.parse(init.body) as { url?: string };
+        if (body.url === listingUrl(theme)) {
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({
+              data: {
+                markdown: listingMarkdown([
+                  { url: 'https://esgnews.com/about', title: 'About no-slash' },
+                  { url: 'https://esgnews.com/tag', title: 'Tag root no-slash' },
+                  { url: 'https://esgnews.com/wp-admin', title: 'WP admin no-slash' },
+                  { url: 'https://esgnews.com/feedback-policy/', title: 'Real Article (feedback)' },
+                ]),
+                metadata: {},
+              },
+            }),
+          };
+        }
+        scrapedUrls.push(body.url ?? '');
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            data: {
+              markdown: 'A feedback-policy article body — should be scraped, not excluded by /feed.',
+              metadata: { 'article:published_time': daysAgoIso(1), author: 'ESG News' },
+            },
+          }),
+        };
+      }),
+    );
+
+    const result = await scrapeEsgNews([theme], new Set(), [], KEY);
+
+    // /about, /tag, /wp-admin all rejected (slug-less or known index first-segment).
+    // /feedback-policy/ accepted (first segment is "feedback-policy", not "feed").
+    expect(scrapedUrls).toEqual(['https://esgnews.com/feedback-policy/']);
+    expect(result).toHaveLength(1);
+  });
+
   it('rejects multi-segment paths the prefix list doesn\'t enumerate (depth-1 safety net)', async () => {
     const theme = stubTheme();
     const scrapedUrls: string[] = [];
