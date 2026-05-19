@@ -39,15 +39,24 @@ async function searchAndExtract(
 
   const seen = new Set<string>();
   const candidates = results.filter((result) => {
-    if (!result.url.includes('esgnews.com')) return false;
+    let hostname = '';
+    try {
+      hostname = new URL(result.url).hostname.toLowerCase();
+    } catch {
+      return false;
+    }
+    if (hostname !== 'esgnews.com' && !hostname.endsWith('.esgnews.com')) return false;
     if (processedUrls.has(result.url) || seen.has(result.url)) return false;
     if (isDuplicateOfCarbonPulse(result.title, cpTitles)) return false;
     seen.add(result.url);
     return true;
   });
 
+  // Cap on *successful* extractions, not raw candidates: early candidates can
+  // be stale/empty/dup, so slicing up front would yield fewer than possible.
   const articles: RawArticle[] = [];
-  for (const candidate of candidates.slice(0, MAX_ARTICLES_PER_THEME)) {
+  for (const candidate of candidates) {
+    if (articles.length >= MAX_ARTICLES_PER_THEME) break;
     try {
       const scraped = await firecrawlScrape(candidate.url, apiKey);
       // No reliable publish date — skip rather than stamp it "today" and let a
@@ -82,11 +91,14 @@ async function searchAndExtract(
         fullContent: cleanContent,
       });
     } catch (error: unknown) {
-      // Quota (402) / rate-limit (429) are fatal to the whole theme — every
-      // remaining candidate would hit the same wall. Propagate so the
-      // per-theme handler logs it instead of silently burning the loop.
+      // Quota (402) / rate-limit (429): every remaining candidate would hit the
+      // same wall. Stop scraping this theme but KEEP what was already collected
+      // — throwing here would discard the partial `articles` for this theme.
       if (error instanceof FirecrawlError && (error.status === 402 || error.status === 429)) {
-        throw error;
+        console.error(
+          `[ESG News] Firecrawl ${error.status} (quota/rate limit) — aborting theme, keeping ${articles.length} collected`,
+        );
+        break;
       }
       const message = error instanceof Error ? error.message : 'unknown';
       console.error(`Failed to extract ESG News article "${candidate.title}": ${message}`);

@@ -9,6 +9,8 @@ context:
   - '{project-root}/apps/news-digest/_bmad-output/project-context.md'
 ---
 
+# Migrate ESG News scraper from Playwright to Firecrawl
+
 <frozen-after-approval reason="human-owned intent — do not modify unless human renegotiates">
 
 ## Intent

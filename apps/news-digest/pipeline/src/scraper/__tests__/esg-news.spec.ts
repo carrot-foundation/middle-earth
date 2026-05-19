@@ -304,6 +304,60 @@ describe('scrapeEsgNews', () => {
     expect(result[0]!.mainTheme).toBe('Fine');
   });
 
+  it('fills the per-theme cap from later candidates when early ones are skipped', async () => {
+    installFetch({
+      search: () => [
+        { url: 'https://esgnews.com/undated/', title: 'Undated' },
+        { url: 'https://esgnews.com/stale/', title: 'Stale' },
+        { url: 'https://esgnews.com/good1/', title: 'Good 1' },
+        { url: 'https://esgnews.com/good2/', title: 'Good 2' },
+      ],
+      scrape: {
+        'https://esgnews.com/undated/': { markdown: 'Valid body but no date.', publishedTime: '' },
+        'https://esgnews.com/stale/': {
+          markdown: 'Valid body but ancient.',
+          publishedTime: daysAgoIso(120),
+        },
+        'https://esgnews.com/good1/': {
+          markdown: 'Fresh article one about carbon markets and policy.',
+          publishedTime: daysAgoIso(1),
+        },
+        'https://esgnews.com/good2/': {
+          markdown: 'Fresh article two about composting infrastructure.',
+          publishedTime: daysAgoIso(2),
+        },
+      },
+    });
+
+    const result = await scrapeEsgNews([stubTheme()], new Set(), [], KEY);
+
+    expect(result.map((article) => article.url)).toEqual([
+      'https://esgnews.com/good1/',
+      'https://esgnews.com/good2/',
+    ]);
+  });
+
+  it('preserves articles already collected when a later scrape hits a quota error', async () => {
+    installFetch({
+      search: () => [
+        { url: 'https://esgnews.com/collected/', title: 'Collected' },
+        { url: 'https://esgnews.com/quota/', title: 'Quota' },
+      ],
+      scrape: {
+        'https://esgnews.com/collected/': {
+          markdown: 'A solid article body about methane monitoring.',
+          publishedTime: daysAgoIso(1),
+        },
+        'https://esgnews.com/quota/': { status: 402 },
+      },
+    });
+
+    const result = await scrapeEsgNews([stubTheme()], new Set(), [], KEY);
+
+    expect(result).toHaveLength(1);
+    expect(result[0]!.url).toBe('https://esgnews.com/collected/');
+  });
+
   it('throws when the Firecrawl API key is not configured', async () => {
     await expect(scrapeEsgNews([stubTheme()], new Set(), [], '')).rejects.toThrow(
       /FIRECRAWL_API_KEY not configured/,
