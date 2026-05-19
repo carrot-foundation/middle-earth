@@ -19,26 +19,33 @@ function daysAgoIso(days: number): string {
   return new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
 }
 
+function listingUrl(theme: ThemeConfig): string {
+  return `https://esgnews.com/?s=${encodeURIComponent(theme.esgNewsSearchTerms)}`;
+}
+
+/** Synthesize a listing-page markdown body from a set of links. */
+function listingMarkdown(links: ReadonlyArray<{ url: string; title: string }>): string {
+  return links.map(({ url, title }) => `[${title}](${url})`).join('\n');
+}
+
 type ScrapeEntry =
   | { markdown: string; publishedTime?: string; author?: string }
   | { status: number };
 
-function installFetch(opts: {
-  search: (query: string) => Array<{ url: string; title: string }>;
-  scrape: Record<string, ScrapeEntry>;
-}): void {
+/**
+ * Mock every Firecrawl `/v2/scrape` call (both listing-page discovery and
+ * per-article scraping). Listing URLs and article URLs are siblings in the
+ * `scrapes` map; absence falls through to a 404.
+ */
+function installFetch(scrapes: Record<string, ScrapeEntry>): void {
   vi.stubGlobal(
     'fetch',
     vi.fn(async (url: string, init: { body: string }) => {
-      const body = JSON.parse(init.body) as { query?: string; url?: string };
-      if (url.endsWith('/v2/search')) {
-        return {
-          ok: true,
-          status: 200,
-          json: async () => ({ data: { web: opts.search(body.query ?? '') } }),
-        };
+      if (!url.endsWith('/v2/scrape')) {
+        throw new Error(`Unexpected fetch URL ${url} — only /v2/scrape is mocked`);
       }
-      const entry = opts.scrape[body.url ?? ''];
+      const body = JSON.parse(init.body) as { url?: string };
+      const entry = scrapes[body.url ?? ''];
       if (!entry || 'status' in entry) {
         return { ok: false, status: entry ? entry.status : 404, json: async () => ({}) };
       }
@@ -65,25 +72,41 @@ describe('scrapeEsgNews', () => {
     vi.clearAllMocks();
   });
 
+  it('hits the publisher search URL for discovery (recency comes from there)', async () => {
+    const theme = stubTheme({ esgNewsSearchTerms: 'methane policy' });
+    const fetchSpy = vi.fn(async (_url: string, _init: { body: string }) => ({
+      ok: true,
+      status: 200,
+      json: async () => ({ data: { markdown: '', metadata: {} } }),
+    }));
+    vi.stubGlobal('fetch', fetchSpy);
+
+    await scrapeEsgNews([theme], new Set(), [], KEY);
+
+    const requested = (JSON.parse(fetchSpy.mock.calls[0]![1].body) as { url: string }).url;
+    expect(requested).toBe('https://esgnews.com/?s=methane%20policy');
+  });
+
   it('returns a sanitized RawArticle and strips page chrome from markdown', async () => {
+    const theme = stubTheme();
     installFetch({
-      search: () => [{ url: 'https://esgnews.com/nz/', title: 'NZ Climate Law' }],
-      scrape: {
-        'https://esgnews.com/nz/': {
-          markdown:
-            'Climate\n/\nGovernment\n/\nNews\nby ESG News Editorial Team\n' +
-            'Share:\nShare on Facebook\nShare on LinkedIn\n' +
-            'New Zealand plans to amend the Climate Change Response Act 2002 to block claims.\n' +
-            'RELATED ARTICLE: New Zealand Lifts Climate Reporting Thresholds\n' +
-            'Subscribe & Follow for Daily ESG Insights\n' +
-            'ESG News Editorial Team The ESG News Editorial Team is comprised of veteran journalists.',
-          author: 'ESG News Editorial Team',
-          publishedTime: daysAgoIso(3),
-        },
+      [listingUrl(theme)]: {
+        markdown: listingMarkdown([{ url: 'https://esgnews.com/nz/', title: 'NZ Climate Law' }]),
+      },
+      'https://esgnews.com/nz/': {
+        markdown:
+          'Climate\n/\nGovernment\n/\nNews\nby ESG News Editorial Team\n' +
+          'Share:\nShare on Facebook\nShare on LinkedIn\n' +
+          'New Zealand plans to amend the Climate Change Response Act 2002 to block claims.\n' +
+          'RELATED ARTICLE: New Zealand Lifts Climate Reporting Thresholds\n' +
+          'Subscribe & Follow for Daily ESG Insights\n' +
+          'ESG News Editorial Team The ESG News Editorial Team is comprised of veteran journalists.',
+        author: 'ESG News Editorial Team',
+        publishedTime: daysAgoIso(3),
       },
     });
 
-    const result = await scrapeEsgNews([stubTheme()], new Set(), [], KEY);
+    const result = await scrapeEsgNews([theme], new Set(), [], KEY);
 
     expect(result).toHaveLength(1);
     const article = result[0]!;
@@ -99,13 +122,116 @@ describe('scrapeEsgNews', () => {
     expect(article.fullContent).not.toMatch(/Editorial Team is comprised of/);
   });
 
-  it('skips results already in processedUrls (no scrape call)', async () => {
+  it('filters tag/category/author/page/region/wp-*/static-page index links out of the listing', async () => {
+    const theme = stubTheme();
+    const scrapedUrls: string[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (_url: string, init: { body: string }) => {
+        const body = JSON.parse(init.body) as { url?: string };
+        if (body.url === listingUrl(theme)) {
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({
+              data: {
+                markdown: listingMarkdown([
+                  { url: 'https://esgnews.com/tag/methane/', title: 'Methane tag' },
+                  { url: 'https://esgnews.com/category/policy/', title: 'Policy category' },
+                  { url: 'https://esgnews.com/author/someone/', title: 'Author page' },
+                  { url: 'https://esgnews.com/page/12/', title: 'Page 12' },
+                  { url: 'https://esgnews.com/esg-europe/page/15/', title: 'EU index' },
+                  { url: 'https://esgnews.com/esg-americas/page/3/', title: 'Americas index' },
+                  { url: 'https://esgnews.com/feed/', title: 'RSS feed' },
+                  { url: 'https://esgnews.com/wp-admin/edit.php', title: 'WP admin' },
+                  { url: 'https://esgnews.com/wp-content/uploads/2026/x.jpg', title: 'Upload' },
+                  { url: 'https://esgnews.com/wp-json/wp/v2/posts', title: 'WP JSON API' },
+                  { url: 'https://esgnews.com/about/', title: 'About' },
+                  { url: 'https://esgnews.com/contact/', title: 'Contact' },
+                  { url: 'https://esgnews.com/real-article-slug/', title: 'Real Article' },
+                ]),
+                metadata: {},
+              },
+            }),
+          };
+        }
+        scrapedUrls.push(body.url ?? '');
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            data: {
+              markdown: 'A real article body about carbon market policy and methane regulation.',
+              metadata: { 'article:published_time': daysAgoIso(1), author: 'ESG News' },
+            },
+          }),
+        };
+      }),
+    );
+
+    const result = await scrapeEsgNews([theme], new Set(), [], KEY);
+
+    // Only the real article should have been scraped; no index/static page hit Firecrawl.
+    expect(scrapedUrls).toEqual(['https://esgnews.com/real-article-slug/']);
+    expect(result).toHaveLength(1);
+    expect(result[0]!.url).toBe('https://esgnews.com/real-article-slug/');
+  });
+
+  it('rejects multi-segment paths the prefix list doesn\'t enumerate (depth-1 safety net)', async () => {
+    const theme = stubTheme();
+    const scrapedUrls: string[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (_url: string, init: { body: string }) => {
+        const body = JSON.parse(init.body) as { url?: string };
+        if (body.url === listingUrl(theme)) {
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({
+              data: {
+                markdown: listingMarkdown([
+                  // Hypothetical new index types (e.g. CMS migration adds these
+                  // overnight); the prefix list wouldn't enumerate them yet,
+                  // but the depth-1 segment check rejects them anyway.
+                  { url: 'https://esgnews.com/topic/methane/', title: 'New topic index' },
+                  { url: 'https://esgnews.com/region/europe/digest/', title: 'Deep listing' },
+                  { url: 'https://esgnews.com/finalists-2026-emissions-rule/', title: 'Real Article' },
+                ]),
+                metadata: {},
+              },
+            }),
+          };
+        }
+        scrapedUrls.push(body.url ?? '');
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            data: {
+              markdown: 'A real article body about a finalised emissions rule.',
+              metadata: { 'article:published_time': daysAgoIso(1), author: 'ESG News' },
+            },
+          }),
+        };
+      }),
+    );
+
+    const result = await scrapeEsgNews([theme], new Set(), [], KEY);
+
+    expect(scrapedUrls).toEqual(['https://esgnews.com/finalists-2026-emissions-rule/']);
+    expect(result).toHaveLength(1);
+  });
+
+  it('skips results already in processedUrls (no article scrape call)', async () => {
+    const theme = stubTheme();
     installFetch({
-      search: () => [{ url: 'https://esgnews.com/seen/', title: 'Seen Article' }],
-      scrape: {},
+      [listingUrl(theme)]: {
+        markdown: listingMarkdown([{ url: 'https://esgnews.com/seen/', title: 'Seen Article' }]),
+      },
     });
     const result = await scrapeEsgNews(
-      [stubTheme()],
+      [theme],
       new Set(['https://esgnews.com/seen/']),
       [],
       KEY,
@@ -114,14 +240,16 @@ describe('scrapeEsgNews', () => {
   });
 
   it('skips results that duplicate a Carbon Pulse title', async () => {
+    const theme = stubTheme();
     installFetch({
-      search: () => [
-        { url: 'https://esgnews.com/dup/', title: 'Global Methane Pledge Reaches Milestone' },
-      ],
-      scrape: {},
+      [listingUrl(theme)]: {
+        markdown: listingMarkdown([
+          { url: 'https://esgnews.com/dup/', title: 'Global Methane Pledge Reaches Milestone' },
+        ]),
+      },
     });
     const result = await scrapeEsgNews(
-      [stubTheme()],
+      [theme],
       new Set(),
       ['Global Methane Pledge Reaches Major Milestone Today'],
       KEY,
@@ -130,131 +258,117 @@ describe('scrapeEsgNews', () => {
   });
 
   it('skips articles older than the age limit', async () => {
+    const theme = stubTheme();
     installFetch({
-      search: () => [{ url: 'https://esgnews.com/old/', title: 'Old Article' }],
-      scrape: {
-        'https://esgnews.com/old/': {
-          markdown: 'This is a sufficiently long article body about carbon markets.',
-          publishedTime: daysAgoIso(120),
-        },
+      [listingUrl(theme)]: {
+        markdown: listingMarkdown([{ url: 'https://esgnews.com/old/', title: 'Old Article' }]),
+      },
+      'https://esgnews.com/old/': {
+        markdown: 'This is a sufficiently long article body about carbon markets.',
+        publishedTime: daysAgoIso(120),
       },
     });
-    const result = await scrapeEsgNews([stubTheme()], new Set(), [], KEY);
+    const result = await scrapeEsgNews([theme], new Set(), [], KEY);
     expect(result).toHaveLength(0);
   });
 
   it('skips pages that sanitize to empty (chrome-only)', async () => {
+    const theme = stubTheme();
     installFetch({
-      search: () => [{ url: 'https://esgnews.com/chrome/', title: 'Chrome Only' }],
-      scrape: {
-        'https://esgnews.com/chrome/': {
-          markdown: 'Share:\nShare on Facebook\nSubscribe & Follow\nRELATED ARTICLE: Something',
-          publishedTime: daysAgoIso(1),
-        },
+      [listingUrl(theme)]: {
+        markdown: listingMarkdown([{ url: 'https://esgnews.com/chrome/', title: 'Chrome Only' }]),
+      },
+      'https://esgnews.com/chrome/': {
+        markdown: 'Share:\nShare on Facebook\nSubscribe & Follow\nRELATED ARTICLE: Something',
+        publishedTime: daysAgoIso(1),
       },
     });
-    const result = await scrapeEsgNews([stubTheme()], new Set(), [], KEY);
+    const result = await scrapeEsgNews([theme], new Set(), [], KEY);
     expect(result).toHaveLength(0);
   });
 
-  it('continues other themes when one theme search fails', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async (url: string, init: { body: string }) => {
-        const body = JSON.parse(init.body) as { query?: string; url?: string };
-        if (url.endsWith('/v2/search')) {
-          if ((body.query ?? '').includes('boom')) {
-            return { ok: false, status: 500, json: async () => ({}) };
-          }
-          return {
-            ok: true,
-            status: 200,
-            json: async () => ({
-              data: { web: [{ url: 'https://esgnews.com/ok/', title: 'Good One' }] },
-            }),
-          };
-        }
-        return {
-          ok: true,
-          status: 200,
-          json: async () => ({
-            data: {
-              markdown: 'A solid article body about composting infrastructure and policy.',
-              metadata: { 'article:published_time': daysAgoIso(2), author: 'ESG News' },
-            },
-          }),
-        };
-      }),
-    );
+  it('continues other themes when one theme discovery fails', async () => {
+    const badTheme = stubTheme({ name: 'Bad', esgNewsSearchTerms: 'boom' });
+    const goodTheme = stubTheme({ name: 'Good' });
+    installFetch({
+      [listingUrl(badTheme)]: { status: 500 },
+      [listingUrl(goodTheme)]: {
+        markdown: listingMarkdown([{ url: 'https://esgnews.com/ok/', title: 'Good One' }]),
+      },
+      'https://esgnews.com/ok/': {
+        markdown: 'A solid article body about composting infrastructure and policy.',
+        publishedTime: daysAgoIso(2),
+        author: 'ESG News',
+      },
+    });
 
-    const result = await scrapeEsgNews(
-      [stubTheme({ name: 'Bad', esgNewsSearchTerms: 'boom' }), stubTheme({ name: 'Good' })],
-      new Set(),
-      [],
-      KEY,
-    );
+    const result = await scrapeEsgNews([badTheme, goodTheme], new Set(), [], KEY);
 
     expect(result).toHaveLength(1);
     expect(result[0]!.mainTheme).toBe('Good');
   });
 
   it('skips a single article whose scrape fails but keeps the others', async () => {
+    const theme = stubTheme();
     installFetch({
-      search: () => [
-        { url: 'https://esgnews.com/bad/', title: 'Bad Scrape' },
-        { url: 'https://esgnews.com/good/', title: 'Good Scrape' },
-      ],
-      scrape: {
-        'https://esgnews.com/bad/': { status: 500 },
-        'https://esgnews.com/good/': {
-          markdown: 'A complete article body discussing carbon market regulation in depth.',
-          publishedTime: daysAgoIso(1),
-        },
+      [listingUrl(theme)]: {
+        markdown: listingMarkdown([
+          { url: 'https://esgnews.com/bad/', title: 'Bad Scrape' },
+          { url: 'https://esgnews.com/good/', title: 'Good Scrape' },
+        ]),
+      },
+      'https://esgnews.com/bad/': { status: 500 },
+      'https://esgnews.com/good/': {
+        markdown: 'A complete article body discussing carbon market regulation in depth.',
+        publishedTime: daysAgoIso(1),
       },
     });
 
-    const result = await scrapeEsgNews([stubTheme()], new Set(), [], KEY);
+    const result = await scrapeEsgNews([theme], new Set(), [], KEY);
 
     expect(result).toHaveLength(1);
     expect(result[0]!.url).toBe('https://esgnews.com/good/');
   });
 
   it('skips an article with no parseable publish date (parity with carbon-pulse)', async () => {
+    const theme = stubTheme();
     installFetch({
-      search: () => [{ url: 'https://esgnews.com/undated/', title: 'Undated' }],
-      scrape: {
-        'https://esgnews.com/undated/': {
-          markdown: 'A perfectly valid long article body with no date metadata.',
-          publishedTime: '',
-        },
+      [listingUrl(theme)]: {
+        markdown: listingMarkdown([{ url: 'https://esgnews.com/undated/', title: 'Undated' }]),
+      },
+      'https://esgnews.com/undated/': {
+        markdown: 'A perfectly valid long article body with no date metadata.',
+        publishedTime: '',
       },
     });
-    const result = await scrapeEsgNews([stubTheme()], new Set(), [], KEY);
+    const result = await scrapeEsgNews([theme], new Set(), [], KEY);
     expect(result).toHaveLength(0);
   });
 
   it('scrapes at most MAX_ARTICLES_PER_THEME eligible results', async () => {
-    let scrapeCalls = 0;
+    const theme = stubTheme();
+    let articleScrapes = 0;
     vi.stubGlobal(
       'fetch',
-      vi.fn(async (url: string, init: { body: string }) => {
+      vi.fn(async (_url: string, init: { body: string }) => {
         const body = JSON.parse(init.body) as { url?: string };
-        if (url.endsWith('/v2/search')) {
+        if (body.url === listingUrl(theme)) {
           return {
             ok: true,
             status: 200,
             json: async () => ({
               data: {
-                web: [
+                markdown: listingMarkdown([
                   { url: 'https://esgnews.com/1/', title: 'One' },
                   { url: 'https://esgnews.com/2/', title: 'Two' },
                   { url: 'https://esgnews.com/3/', title: 'Three' },
-                ],
+                ]),
+                metadata: {},
               },
             }),
           };
         }
-        scrapeCalls += 1;
+        articleScrapes += 1;
         return {
           ok: true,
           status: 200,
@@ -268,68 +382,92 @@ describe('scrapeEsgNews', () => {
       }),
     );
 
-    const result = await scrapeEsgNews([stubTheme()], new Set(), [], KEY);
+    const result = await scrapeEsgNews([theme], new Set(), [], KEY);
 
-    expect(scrapeCalls).toBe(2);
+    expect(articleScrapes).toBe(2);
     expect(result).toHaveLength(2);
   });
 
-  it('aborts the theme on a quota error (402) without burning the rest of the loop', async () => {
-    installFetch({
-      search: (query) =>
-        query.includes('quota')
-          ? [
-              { url: 'https://esgnews.com/q1/', title: 'Q1' },
-              { url: 'https://esgnews.com/q2/', title: 'Q2' },
-            ]
-          : [{ url: 'https://esgnews.com/ok/', title: 'OK' }],
-      scrape: {
-        'https://esgnews.com/q1/': { status: 402 },
-        'https://esgnews.com/q2/': { status: 402 },
+  it('aborts the remaining themes when the listing scrape itself returns 402 (quota)', async () => {
+    const quotaTheme = stubTheme({ name: 'First', esgNewsSearchTerms: 'first' });
+    const wouldBeNextTheme = stubTheme({ name: 'Second', esgNewsSearchTerms: 'second' });
+    const requestedUrls: string[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (_url: string, init: { body: string }) => {
+        const body = JSON.parse(init.body) as { url?: string };
+        requestedUrls.push(body.url ?? '');
+        if (body.url === listingUrl(quotaTheme)) {
+          return { ok: false, status: 402, json: async () => ({}) };
+        }
+        return { ok: true, status: 200, json: async () => ({ data: { markdown: '', metadata: {} } }) };
+      }),
+    );
+
+    const result = await scrapeEsgNews([quotaTheme, wouldBeNextTheme], new Set(), [], KEY);
+
+    expect(result).toEqual([]);
+    // The second theme's listing must NOT be requested — the loop short-circuited.
+    expect(requestedUrls).not.toContain(listingUrl(wouldBeNextTheme));
+  });
+
+  it.each([402, 429] as const)(
+    'aborts the theme on a Firecrawl %s quota/rate-limit response from per-article scrapes',
+    async (status) => {
+      const quotaTheme = stubTheme({ name: 'Quota', esgNewsSearchTerms: 'quota' });
+      const fineTheme = stubTheme({ name: 'Fine' });
+      installFetch({
+        [listingUrl(quotaTheme)]: {
+          markdown: listingMarkdown([
+            { url: 'https://esgnews.com/q1/', title: 'Q1' },
+            { url: 'https://esgnews.com/q2/', title: 'Q2' },
+          ]),
+        },
+        [listingUrl(fineTheme)]: {
+          markdown: listingMarkdown([{ url: 'https://esgnews.com/ok/', title: 'OK' }]),
+        },
+        'https://esgnews.com/q1/': { status },
+        'https://esgnews.com/q2/': { status },
         'https://esgnews.com/ok/': {
           markdown: 'A healthy article body about carbon market regulation.',
           publishedTime: daysAgoIso(1),
         },
-      },
-    });
+      });
 
-    const result = await scrapeEsgNews(
-      [stubTheme({ name: 'Quota', esgNewsSearchTerms: 'quota' }), stubTheme({ name: 'Fine' })],
-      new Set(),
-      [],
-      KEY,
-    );
+      const result = await scrapeEsgNews([quotaTheme, fineTheme], new Set(), [], KEY);
 
-    expect(result).toHaveLength(1);
-    expect(result[0]!.mainTheme).toBe('Fine');
-  });
+      expect(result).toHaveLength(1);
+      expect(result[0]!.mainTheme).toBe('Fine');
+    },
+  );
 
   it('fills the per-theme cap from later candidates when early ones are skipped', async () => {
+    const theme = stubTheme();
     installFetch({
-      search: () => [
-        { url: 'https://esgnews.com/undated/', title: 'Undated' },
-        { url: 'https://esgnews.com/stale/', title: 'Stale' },
-        { url: 'https://esgnews.com/good1/', title: 'Good 1' },
-        { url: 'https://esgnews.com/good2/', title: 'Good 2' },
-      ],
-      scrape: {
-        'https://esgnews.com/undated/': { markdown: 'Valid body but no date.', publishedTime: '' },
-        'https://esgnews.com/stale/': {
-          markdown: 'Valid body but ancient.',
-          publishedTime: daysAgoIso(120),
-        },
-        'https://esgnews.com/good1/': {
-          markdown: 'Fresh article one about carbon markets and policy.',
-          publishedTime: daysAgoIso(1),
-        },
-        'https://esgnews.com/good2/': {
-          markdown: 'Fresh article two about composting infrastructure.',
-          publishedTime: daysAgoIso(2),
-        },
+      [listingUrl(theme)]: {
+        markdown: listingMarkdown([
+          { url: 'https://esgnews.com/undated/', title: 'Undated' },
+          { url: 'https://esgnews.com/stale/', title: 'Stale' },
+          { url: 'https://esgnews.com/good1/', title: 'Good 1' },
+          { url: 'https://esgnews.com/good2/', title: 'Good 2' },
+        ]),
+      },
+      'https://esgnews.com/undated/': { markdown: 'Valid body but no date.', publishedTime: '' },
+      'https://esgnews.com/stale/': {
+        markdown: 'Valid body but ancient.',
+        publishedTime: daysAgoIso(120),
+      },
+      'https://esgnews.com/good1/': {
+        markdown: 'Fresh article one about carbon markets and policy.',
+        publishedTime: daysAgoIso(1),
+      },
+      'https://esgnews.com/good2/': {
+        markdown: 'Fresh article two about composting infrastructure.',
+        publishedTime: daysAgoIso(2),
       },
     });
 
-    const result = await scrapeEsgNews([stubTheme()], new Set(), [], KEY);
+    const result = await scrapeEsgNews([theme], new Set(), [], KEY);
 
     expect(result.map((article) => article.url)).toEqual([
       'https://esgnews.com/good1/',
@@ -338,42 +476,51 @@ describe('scrapeEsgNews', () => {
   });
 
   it('preserves articles already collected when a later scrape hits a quota error', async () => {
+    const theme = stubTheme();
     installFetch({
-      search: () => [
-        { url: 'https://esgnews.com/collected/', title: 'Collected' },
-        { url: 'https://esgnews.com/quota/', title: 'Quota' },
-      ],
-      scrape: {
-        'https://esgnews.com/collected/': {
-          markdown: 'A solid article body about methane monitoring.',
-          publishedTime: daysAgoIso(1),
-        },
-        'https://esgnews.com/quota/': { status: 402 },
+      [listingUrl(theme)]: {
+        markdown: listingMarkdown([
+          { url: 'https://esgnews.com/collected/', title: 'Collected' },
+          { url: 'https://esgnews.com/quota/', title: 'Quota' },
+        ]),
       },
+      'https://esgnews.com/collected/': {
+        markdown: 'A solid article body about methane monitoring.',
+        publishedTime: daysAgoIso(1),
+      },
+      'https://esgnews.com/quota/': { status: 402 },
     });
 
-    const result = await scrapeEsgNews([stubTheme()], new Set(), [], KEY);
+    const result = await scrapeEsgNews([theme], new Set(), [], KEY);
 
     expect(result).toHaveLength(1);
     expect(result[0]!.url).toBe('https://esgnews.com/collected/');
   });
 
   it('does not re-scrape an article that already matched an earlier theme', async () => {
-    let scrapeCalls = 0;
+    const themeA = stubTheme({ name: 'Theme A', esgNewsSearchTerms: 'aaa' });
+    const themeB = stubTheme({ name: 'Theme B', esgNewsSearchTerms: 'bbb' });
+    let articleScrapes = 0;
     vi.stubGlobal(
       'fetch',
-      vi.fn(async (url: string, init: { body: string }) => {
-        if (url.endsWith('/v2/search')) {
-          // Every theme search surfaces the SAME article.
+      vi.fn(async (_url: string, init: { body: string }) => {
+        const body = JSON.parse(init.body) as { url?: string };
+        if (body.url === listingUrl(themeA) || body.url === listingUrl(themeB)) {
+          // Every theme listing surfaces the SAME article.
           return {
             ok: true,
             status: 200,
             json: async () => ({
-              data: { web: [{ url: 'https://esgnews.com/shared/', title: 'Shared' }] },
+              data: {
+                markdown: listingMarkdown([
+                  { url: 'https://esgnews.com/shared/', title: 'Shared' },
+                ]),
+                metadata: {},
+              },
             }),
           };
         }
-        scrapeCalls += 1;
+        articleScrapes += 1;
         return {
           ok: true,
           status: 200,
@@ -387,17 +534,9 @@ describe('scrapeEsgNews', () => {
       }),
     );
 
-    const result = await scrapeEsgNews(
-      [
-        stubTheme({ name: 'Theme A', esgNewsSearchTerms: 'aaa' }),
-        stubTheme({ name: 'Theme B', esgNewsSearchTerms: 'bbb' }),
-      ],
-      new Set(),
-      [],
-      KEY,
-    );
+    const result = await scrapeEsgNews([themeA, themeB], new Set(), [], KEY);
 
-    expect(scrapeCalls).toBe(1);
+    expect(articleScrapes).toBe(1);
     expect(result).toHaveLength(1);
     expect(result[0]!.url).toBe('https://esgnews.com/shared/');
   });

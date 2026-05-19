@@ -1,11 +1,67 @@
 import { sanitizeArticleText } from '../helpers/content.helpers.js';
 import { parseDate } from '../helpers/date.helpers.js';
-import { FirecrawlError, firecrawlScrape, firecrawlSearch } from '../helpers/firecrawl.helpers.js';
+import {
+  FirecrawlError,
+  extractMarkdownLinks,
+  firecrawlScrape,
+} from '../helpers/firecrawl.helpers.js';
 import type { RawArticle, ThemeConfig } from '../types.js';
 
 const MAX_ARTICLES_PER_THEME = 2;
 const MAX_ARTICLE_AGE_DAYS = 30;
-const SEARCH_LIMIT = 10;
+const LISTING_URL_BASE = 'https://esgnews.com/?s=';
+
+// ESG News article permalinks are slug-only at the root (`/some-slug/`).
+// These prefixes mark tag/category/author/pagination/region/static-page
+// routes that the search page also links to — exclude them so we don't
+// waste credits scraping a non-article page (the old `/search` flow
+// burnt 16 scrapes on these in the 2026-05-19 validation run). All
+// entries end with `/` so they never accidentally swallow a real slug
+// (e.g. `/feed` would have excluded a legitimate `/feedback-policy/`).
+const ESG_INDEX_PATH_PREFIXES: readonly string[] = [
+  '/tag/',
+  '/category/',
+  '/author/',
+  '/page/',
+  '/esg-europe/',
+  '/esg-americas/',
+  '/esg-africa/',
+  '/esg-asia-pacific/',
+  '/feed/',
+  '/wp-admin/',
+  '/wp-content/',
+  '/wp-json/',
+  '/about/',
+  '/contact/',
+  '/subscribe/',
+  '/authors/',
+];
+
+function isEsgNewsArticleUrl(url: string): boolean {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return false;
+  }
+  const host = parsed.hostname.toLowerCase();
+  if (host !== 'esgnews.com' && !host.endsWith('.esgnews.com')) return false;
+  const path = parsed.pathname.toLowerCase();
+  if (ESG_INDEX_PATH_PREFIXES.some((prefix) => path.startsWith(prefix))) return false;
+  // Article permalinks are exactly one path segment under root (`/slug/`).
+  // Multi-segment paths (`/tag/x/`, `/esg-europe/page/12/`) are already
+  // rejected above; this catches future index types we haven't enumerated
+  // yet (e.g. a hypothetical `/topic/methane/`) without us having to keep
+  // maintaining the prefix list.
+  const segments = path.split('/').filter((segment) => segment.length > 0);
+  return segments.length === 1;
+}
+
+function isQuotaError(error: unknown): boolean {
+  return (
+    error instanceof FirecrawlError && (error.status === 402 || error.status === 429)
+  );
+}
 
 function isDuplicateOfCarbonPulse(title: string, cpTitles: readonly string[]): boolean {
   const lowerTitle = title.toLowerCase();
@@ -19,30 +75,24 @@ function isDuplicateOfCarbonPulse(title: string, cpTitles: readonly string[]): b
   });
 }
 
-async function searchAndExtract(
+async function discoverAndScrape(
   theme: ThemeConfig,
   processedUrls: ReadonlySet<string>,
   cpTitles: readonly string[],
   apiKey: string,
 ): Promise<RawArticle[]> {
-  const results = await firecrawlSearch(
-    `site:esgnews.com ${theme.esgNewsSearchTerms}`,
-    apiKey,
-    SEARCH_LIMIT,
-  );
+  // Hit ESG News's own WordPress search (default order: publish-date-desc)
+  // and read links straight from the markdown. This is what gives us
+  // recency — Firecrawl's `/v2/search` upstream index lacks dates on this
+  // publisher and binary-filtered every result when `tbs` was applied
+  // (PR #34 → reverted in #35; see firecrawl.helpers note).
+  const listingUrl = `${LISTING_URL_BASE}${encodeURIComponent(theme.esgNewsSearchTerms)}`;
+  const listing = await firecrawlScrape(listingUrl, apiKey);
 
-  const seen = new Set<string>();
-  const candidates = results.filter((result) => {
-    let hostname = '';
-    try {
-      hostname = new URL(result.url).hostname.toLowerCase();
-    } catch {
-      return false;
-    }
-    if (hostname !== 'esgnews.com' && !hostname.endsWith('.esgnews.com')) return false;
-    if (processedUrls.has(result.url) || seen.has(result.url)) return false;
-    if (isDuplicateOfCarbonPulse(result.title, cpTitles)) return false;
-    seen.add(result.url);
+  const candidates = extractMarkdownLinks(listing.markdown, ({ url, title }) => {
+    if (!isEsgNewsArticleUrl(url)) return false;
+    if (processedUrls.has(url)) return false;
+    if (isDuplicateOfCarbonPulse(title, cpTitles)) return false;
     return true;
   });
 
@@ -55,9 +105,18 @@ async function searchAndExtract(
       const scraped = await firecrawlScrape(candidate.url, apiKey);
       // No reliable publish date — skip rather than stamp it "today" and let a
       // stale article bypass the freshness window (parity with carbon-pulse.ts).
+      // Split the two failure modes so a Firecrawl metadata-schema regression
+      // (parseable string suddenly returning unparseable) is visibly distinct
+      // from publisher pages that genuinely lack a date.
+      if (!scraped.publishedTime) {
+        console.warn(`[ESG News] No publish_time metadata, skipping: ${candidate.url}`);
+        continue;
+      }
       const articleDate = parseDate(scraped.publishedTime);
       if (!articleDate) {
-        console.warn(`[ESG News] Missing/invalid publish date, skipping: ${candidate.url}`);
+        console.error(
+          `[ESG News] Unparseable publish_time "${scraped.publishedTime}", skipping: ${candidate.url}`,
+        );
         continue;
       }
       const ageMs = Date.now() - new Date(articleDate).getTime();
@@ -88,9 +147,10 @@ async function searchAndExtract(
       // Quota (402) / rate-limit (429): every remaining candidate would hit the
       // same wall. Stop scraping this theme but KEEP what was already collected
       // — throwing here would discard the partial `articles` for this theme.
-      if (error instanceof FirecrawlError && (error.status === 402 || error.status === 429)) {
+      if (isQuotaError(error)) {
+        const status = (error as FirecrawlError).status;
         console.error(
-          `[ESG News] Firecrawl ${error.status} (quota/rate limit) — aborting theme, keeping ${articles.length} collected`,
+          `[ESG News] Firecrawl ${status} (quota/rate limit) — aborting theme, keeping ${articles.length} collected`,
         );
         break;
       }
@@ -117,15 +177,23 @@ export async function scrapeEsgNews(
   // returned twice.
   const seenUrls = new Set(processedUrls);
   for (const theme of themes) {
-    console.log(`[ESG News] Searching: ${theme.name}`);
+    console.log(`[ESG News] Discovering: ${theme.name}`);
     try {
-      const articles = await searchAndExtract(theme, seenUrls, cpTitles, firecrawlApiKey);
+      const articles = await discoverAndScrape(theme, seenUrls, cpTitles, firecrawlApiKey);
       allArticles.push(...articles);
       for (const article of articles) seenUrls.add(article.url);
       console.log(`[ESG News] Found ${articles.length} articles for ${theme.name}`);
     } catch (error: unknown) {
+      // A 402/429 from the listing scrape itself (not the per-article scrape)
+      // propagates here; treat as quota exhaustion so the remaining themes
+      // don't hammer the exhausted API. Parity with `scrapeTrellis`.
+      if (isQuotaError(error)) {
+        const status = (error as FirecrawlError).status;
+        console.error(`[ESG News] Firecrawl ${status} during theme discovery — aborting remaining themes.`);
+        break;
+      }
       const message = error instanceof Error ? error.message : 'unknown';
-      console.error(`[ESG News] Search failed for "${theme.name}": ${message}`);
+      console.error(`[ESG News] Discovery failed for "${theme.name}": ${message}`);
     }
   }
   return allArticles;
