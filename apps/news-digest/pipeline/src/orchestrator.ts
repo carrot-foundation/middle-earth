@@ -1,5 +1,5 @@
 import { S3Store } from './state/s3-store.js';
-import { getEligibleThemes } from './helpers/theme.helpers.js';
+import { applyThemesFilter, getEligibleThemes } from './helpers/theme.helpers.js';
 import { deduplicateArticles } from './helpers/dedup.helpers.js';
 import { buildArticleMarkdown, slugify } from './helpers/markdown.helpers.js';
 import { scrapeCarbonPulse } from './scraper/carbon-pulse.js';
@@ -27,6 +27,10 @@ interface PipelineConfig {
   readonly skipSlack: boolean;
   readonly skipEmail: boolean;
   readonly skipNotion: boolean;
+  // Allowlist of theme names. When set, the eligible-themes list is further
+  // restricted to these names — knob for cheap one-theme validation runs
+  // since `daily` themes are otherwise unconditionally eligible.
+  readonly themesFilter?: ReadonlySet<string>;
 }
 
 const AI_CONCURRENCY = 5;
@@ -218,7 +222,13 @@ export async function runPipeline(config: PipelineConfig): Promise<PipelineResul
 
   // Step 2: Determine eligible themes
   console.log('Step 2: Determining eligible themes...');
-  const eligibleThemes = getEligibleThemes(THEMES, state.themeLastProcessed, today);
+  const rotationEligible = getEligibleThemes(THEMES, state.themeLastProcessed, today);
+  const eligibleThemes = applyThemesFilter(rotationEligible, config.themesFilter);
+  if (config.themesFilter) {
+    console.log(
+      `[THEMES_FILTER] Restricting to ${eligibleThemes.length} of ${rotationEligible.length} rotation-eligible themes`,
+    );
+  }
   console.log(`Eligible themes: ${eligibleThemes.map((t) => t.name).join(', ')}`);
 
   if (eligibleThemes.length === 0) {

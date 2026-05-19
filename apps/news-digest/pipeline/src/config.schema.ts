@@ -36,6 +36,10 @@ export const envSchema = z.object({
   SKIP_SLACK: z.string().default('false'),
   SKIP_EMAIL: z.string().default('false'),
   SKIP_NOTION: z.string().default('false'),
+  // Comma-separated theme names. When set, restricts processing to those
+  // themes only (applied AFTER getEligibleThemes). Knob for cheap one-theme
+  // validation runs — see helpers/theme.helpers parseThemesFilter.
+  THEMES_FILTER: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;
