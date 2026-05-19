@@ -2,21 +2,25 @@ import { THEMES } from '../config.constants.js';
 import { curateTrellisArticles, type TrellisCandidate } from '../ai/trellis-curator.js';
 import { sanitizeArticleText } from '../helpers/content.helpers.js';
 import { parseDate } from '../helpers/date.helpers.js';
-import { FirecrawlError, firecrawlScrape, firecrawlSearch } from '../helpers/firecrawl.helpers.js';
+import {
+  FirecrawlError,
+  extractMarkdownLinks,
+  firecrawlScrape,
+} from '../helpers/firecrawl.helpers.js';
 import type { RawArticle, ThemeConfig } from '../types.js';
 
 const MAX_ARTICLES_PER_THEME = 1;
 const MAX_ARTICLE_AGE_DAYS = 30;
 const CANDIDATE_POOL_SIZE = 15;
-const SEARCH_LIMIT = 10;
-const MAX_EXCERPT_LENGTH = 400;
-// The curator (not a per-theme query) decides which of these are worth the
-// digest; keep the discovery query broad and recency-biased, scoped to Trellis.
-const CURATION_QUERY = 'site:trellis.net climate sustainability decarbonization circular economy';
+const PER_THEME_LISTING_URL_BASE = 'https://trellis.net/?s=';
+// Trellis's own date-ordered articles index — same URL the pre-Firecrawl
+// Playwright scraper used as `LISTING_URL` for the curation broad pool.
+// One scrape per pipeline run, shared across all eligible themes.
+const CURATION_LISTING_URL = 'https://trellis.net/articles/';
 
 // Trellis articles live at trellis.net/article/...; the old Playwright code only
 // ever followed `a[href*="/article/"]`. Require both an in-domain host and the
-// article path so a search provider can't steer us to an arbitrary URL.
+// article path so a listing-page menu/footer link can't steer us elsewhere.
 function isTrellisArticleUrl(url: string): boolean {
   let parsed: URL;
   try {
@@ -26,7 +30,10 @@ function isTrellisArticleUrl(url: string): boolean {
   }
   const host = parsed.hostname.toLowerCase();
   if (host !== 'trellis.net' && !host.endsWith('.trellis.net')) return false;
-  return parsed.pathname.includes('/article/');
+  // Lowercase the path before the contains-check so a future CMS migration
+  // serving `/Article/` (or otherwise mixed-case) doesn't silently lose
+  // every candidate; parity with the ESG predicate above.
+  return parsed.pathname.toLowerCase().includes('/article/');
 }
 
 function isQuotaError(error: unknown): boolean {
@@ -50,9 +57,17 @@ async function scrapeArticle(
   const scraped = await firecrawlScrape(url, apiKey);
   // No reliable publish date — skip rather than stamp it "today" and let a
   // stale article bypass the freshness window (parity with esg/carbon-pulse).
+  // Split missing-vs-unparseable so a Firecrawl metadata-schema regression
+  // is visibly distinct from publisher pages that genuinely lack a date.
+  if (!scraped.publishedTime) {
+    console.warn(`[Trellis] No publish_time metadata, skipping: ${url}`);
+    return null;
+  }
   const articleDate = parseDate(scraped.publishedTime);
   if (!articleDate) {
-    console.warn(`[Trellis] Missing/invalid publish date, skipping: ${url}`);
+    console.error(
+      `[Trellis] Unparseable publish_time "${scraped.publishedTime}", skipping: ${url}`,
+    );
     return null;
   }
   const ageMs = Date.now() - new Date(articleDate).getTime();
@@ -78,27 +93,26 @@ async function scrapeArticle(
   };
 }
 
-interface ThemeSearchResult {
+interface ThemeDiscoveryResult {
   readonly articles: RawArticle[];
   readonly quotaExhausted: boolean;
 }
 
-async function searchTheme(
+async function discoverThemeAndScrape(
   theme: ThemeConfig,
   processedUrls: ReadonlySet<string>,
   apiKey: string,
-): Promise<ThemeSearchResult> {
-  const results = await firecrawlSearch(
-    `site:trellis.net ${theme.trellisSearchTerms}`,
-    apiKey,
-    SEARCH_LIMIT,
-  );
+): Promise<ThemeDiscoveryResult> {
+  // Per-theme discovery: Trellis's own WordPress search (default
+  // publish-date-desc ordering), then extract `/article/` permalinks from
+  // the returned markdown. Replaces the `/v2/search` flow whose upstream
+  // index lacked dates for this publisher.
+  const listingUrl = `${PER_THEME_LISTING_URL_BASE}${encodeURIComponent(theme.trellisSearchTerms)}`;
+  const listing = await firecrawlScrape(listingUrl, apiKey);
 
-  const seen = new Set<string>();
-  const candidates = results.filter((result) => {
-    if (!isTrellisArticleUrl(result.url)) return false;
-    if (processedUrls.has(result.url) || seen.has(result.url)) return false;
-    seen.add(result.url);
+  const candidates = extractMarkdownLinks(listing.markdown, ({ url }) => {
+    if (!isTrellisArticleUrl(url)) return false;
+    if (processedUrls.has(url)) return false;
     return true;
   });
 
@@ -127,26 +141,28 @@ async function collectCandidates(
   excludeUrls: ReadonlySet<string>,
   apiKey: string,
 ): Promise<TrellisCandidate[]> {
-  // Over-request: host/exclude/dedup filtering below would otherwise shrink the
-  // pool below CANDIDATE_POOL_SIZE with no top-up.
-  const results = await firecrawlSearch(CURATION_QUERY, apiKey, CANDIDATE_POOL_SIZE * 2);
-  const seen = new Set<string>();
-  const candidates: TrellisCandidate[] = [];
-  for (const result of results) {
-    if (!isTrellisArticleUrl(result.url)) continue;
-    if (excludeUrls.has(result.url) || seen.has(result.url)) continue;
-    seen.add(result.url);
-    // date is enforced later at the pick scrape; the curator ranks on
-    // title+excerpt and only prefers recency "when relevance is similar".
-    candidates.push({
-      url: result.url,
-      title: result.title,
-      date: '',
-      excerpt: (result.description || result.title).slice(0, MAX_EXCERPT_LENGTH),
-    });
-    if (candidates.length >= CANDIDATE_POOL_SIZE) break;
-  }
-  return candidates;
+  // Single broad-pool scrape per run; shared across all themes via the curator.
+  const listing = await firecrawlScrape(CURATION_LISTING_URL, apiKey);
+  // Over-request: host/exclude/dedup filtering would otherwise shrink the pool
+  // below CANDIDATE_POOL_SIZE with no top-up. extractMarkdownLinks already
+  // dedupes URLs preserving order, so the predicate just enforces host/path
+  // and the running exclude set.
+  const links = extractMarkdownLinks(listing.markdown, ({ url }) => {
+    if (!isTrellisArticleUrl(url)) return false;
+    if (excludeUrls.has(url)) return false;
+    return true;
+  });
+  // Cap the pool to twice CANDIDATE_POOL_SIZE so the curator has headroom
+  // to reject low-quality candidates without us re-querying.
+  return links.slice(0, CANDIDATE_POOL_SIZE * 2).map((link) => ({
+    url: link.url,
+    title: link.title,
+    // Markdown extraction doesn't expose the listing card's excerpt the old
+    // Playwright code did; fall back to the title (matches the curator
+    // contract — it just wants enough signal to rank).
+    date: '',
+    excerpt: link.title,
+  }));
 }
 
 export async function scrapeTrellis(
@@ -166,9 +182,9 @@ export async function scrapeTrellis(
   const seenUrls = new Set(processedUrls);
   let quotaExhausted = false;
   for (const theme of themes) {
-    console.log(`[Trellis] Searching: ${theme.name}`);
+    console.log(`[Trellis] Discovering: ${theme.name}`);
     try {
-      const result = await searchTheme(theme, seenUrls, firecrawlApiKey);
+      const result = await discoverThemeAndScrape(theme, seenUrls, firecrawlApiKey);
       perTheme.push(...result.articles);
       for (const article of result.articles) seenUrls.add(article.url);
       console.log(`[Trellis] Found ${result.articles.length} article(s) for ${theme.name}`);
@@ -177,16 +193,16 @@ export async function scrapeTrellis(
         break;
       }
     } catch (error: unknown) {
-      // A 402/429 from firecrawlSearch itself (not the scrape) propagates here;
-      // treat it as quota exhaustion too, so remaining themes + curation are
-      // skipped rather than hammering the exhausted API.
+      // A 402/429 from the listing scrape itself (not the article scrape)
+      // propagates here; treat it as quota exhaustion too, so remaining
+      // themes + curation are skipped rather than hammering the exhausted API.
       if (isQuotaError(error)) {
-        console.error('[Trellis] Firecrawl quota/rate limit during theme search — aborting remaining themes.');
+        console.error('[Trellis] Firecrawl quota/rate limit during theme discovery — aborting remaining themes.');
         quotaExhausted = true;
         break;
       }
       const message = error instanceof Error ? error.message : 'unknown';
-      console.error(`[Trellis] Search failed for "${theme.name}": ${message}`);
+      console.error(`[Trellis] Discovery failed for "${theme.name}": ${message}`);
     }
   }
 

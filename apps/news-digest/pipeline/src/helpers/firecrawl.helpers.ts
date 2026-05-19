@@ -1,13 +1,22 @@
-// Thin Firecrawl v2 HTTP client (search + scrape) used by the scrapers.
+// Thin Firecrawl v2 HTTP client (scrape) used by the scrapers.
 //
-// Firecrawl replaces hand-written CSS-selector scraping: `search` gives
-// layout-resilient discovery and `scrape` returns markdown regardless of DOM.
+// Firecrawl replaces hand-written CSS-selector scraping: `scrape` returns
+// markdown regardless of DOM, and we discover article candidates by
+// scraping each publisher's own date-ordered listing/search page and
+// extracting links from that markdown.
+//
+// Why not `/v2/search`? It was tried (PRs #31/#32) and failed: the upstream
+// web index does not carry reliable publish dates for `esgnews.com` /
+// `trellis.net`, so its `tbs=qdr:*` recency filter is binary-fatal (PR #34
+// → reverted in #35). Hitting each publisher's own search/listing page
+// gives the same recency the old Playwright scrapers had for free.
+//
 // Mirrors the raw-`fetch` pattern in `ai/article-processor.ts` (no SDK).
-// Validated against the v2 API in the 2026-05-18 Step 0 spike.
+// Validated against the v2 API in the 2026-05-18 Step 0 spike and the
+// 2026-05-19 isolated ECS validation runs.
 
 const FIRECRAWL_API_BASE = 'https://api.firecrawl.dev/v2';
 const SCRAPE_TIMEOUT_MS = 60_000;
-const SEARCH_TIMEOUT_MS = 30_000;
 // Client-side ceiling above the server-side `timeout` hint so a hung socket
 // can't block the scheduled pipeline indefinitely (orchestrator try/catch
 // catches errors, not hangs).
@@ -15,24 +24,29 @@ const CLIENT_TIMEOUT_BUFFER_MS = 15_000;
 
 export class FirecrawlError extends Error {
   readonly status?: number;
+  // Preserve the underlying error class (AbortError, TypeError, …) so
+  // callers can distinguish a transport-level timeout from a quota
+  // response if they need to. Logged callers see `error.message`; outage
+  // detection can inspect `error.cause` instead of string-matching.
+  readonly cause?: unknown;
 
-  constructor(message: string, status?: number) {
+  constructor(message: string, status?: number, cause?: unknown) {
     super(message);
     this.name = 'FirecrawlError';
     this.status = status;
+    this.cause = cause;
   }
-}
-
-export interface FirecrawlSearchResult {
-  readonly url: string;
-  readonly title: string;
-  readonly description: string;
 }
 
 export interface FirecrawlScrapeResult {
   readonly markdown: string;
   readonly publishedTime: string;
   readonly author: string;
+}
+
+export interface MarkdownLink {
+  readonly url: string;
+  readonly title: string;
 }
 
 function firstString(value: unknown): string {
@@ -64,7 +78,7 @@ async function firecrawlPost(
     });
   } catch (error: unknown) {
     const reason = error instanceof Error ? error.message : 'network error';
-    throw new FirecrawlError(`Firecrawl ${path} request failed: ${reason}`);
+    throw new FirecrawlError(`Firecrawl ${path} request failed: ${reason}`, undefined, error);
   }
 
   if (!response.ok) {
@@ -79,47 +93,9 @@ async function firecrawlPost(
 }
 
 /**
- * Web search via Firecrawl. Returns `{ url, title }` for each web result,
- * dropping entries missing either field.
- *
- * Recency: the Google-style `tbs=qdr:*` filter was tried and dropped — for
- * `site:esgnews.com` / `site:trellis.net` queries it excluded **all** results
- * (Firecrawl honors `tbs` only when the underlying index has a clean
- * publish date; both publishers lack one, so the filter is binary-fatal).
- * A hybrid listing-page scrape will replace it; until then recency relies
- * solely on the per-scraper `MAX_ARTICLE_AGE_DAYS` filter.
- */
-export async function firecrawlSearch(
-  query: string,
-  apiKey: string,
-  limit = 10,
-): Promise<FirecrawlSearchResult[]> {
-  const data = await firecrawlPost(
-    '/search',
-    apiKey,
-    { query, limit, sources: [{ type: 'web' }] },
-    SEARCH_TIMEOUT_MS + CLIENT_TIMEOUT_BUFFER_MS,
-  );
-
-  const payload = (data['data'] ?? {}) as Record<string, unknown>;
-  const web = Array.isArray(payload['web']) ? payload['web'] : [];
-
-  return web
-    .map((entry): FirecrawlSearchResult => {
-      const record = (entry ?? {}) as Record<string, unknown>;
-      return {
-        url: typeof record['url'] === 'string' ? record['url'] : '',
-        title: typeof record['title'] === 'string' ? record['title'].trim() : '',
-        description:
-          typeof record['description'] === 'string' ? record['description'].trim() : '',
-      };
-    })
-    .filter((result) => result.url.length > 0 && result.title.length > 0);
-}
-
-/**
  * Scrape a single URL to markdown (main content only). Pull publish time and
- * author from page metadata when present.
+ * author from page metadata when present. Used both for the listing/search
+ * pages (discovery) and for the article body itself.
  */
 export async function firecrawlScrape(
   url: string,
@@ -141,4 +117,40 @@ export async function firecrawlScrape(
     author:
       firstString(metadata['author']) || firstString(metadata['article:author']),
   };
+}
+
+// Inline markdown link syntax: `[title](url)` with an optional `"title"`
+// trailing the URL. Reference-style links (`[t][ref]`) and bare URLs are
+// not matched on purpose — listing pages always render as inline links.
+// The negative lookbehind `(?<!!)` excludes image syntax `![alt](url)` so
+// thumbnail images on listing cards don't leak into the candidate pool
+// (would burn a Firecrawl scrape on a JPG URL).
+const MARKDOWN_LINK_PATTERN = /(?<!!)\[([^\]]*)\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g;
+
+/**
+ * Pull `{url, title}` from each markdown inline link, in source order, keeping
+ * only those the `predicate` accepts. Titles are trimmed; empty titles and
+ * empty URLs are dropped. Duplicates (by URL) are removed preserving the
+ * first occurrence.
+ *
+ * Stays narrow on purpose: per-source rules (host check, path patterns,
+ * exclude index pages, dedup against `processedUrls`) live in the scraper
+ * predicate so the helper stays generic.
+ */
+export function extractMarkdownLinks(
+  markdown: string,
+  predicate: (link: MarkdownLink) => boolean,
+): MarkdownLink[] {
+  if (!markdown) return [];
+  const seen = new Set<string>();
+  const out: MarkdownLink[] = [];
+  for (const match of markdown.matchAll(MARKDOWN_LINK_PATTERN)) {
+    const title = (match[1] ?? '').trim();
+    const url = (match[2] ?? '').trim();
+    if (!title || !url || seen.has(url)) continue;
+    if (!predicate({ url, title })) continue;
+    seen.add(url);
+    out.push({ url, title });
+  }
+  return out;
 }
