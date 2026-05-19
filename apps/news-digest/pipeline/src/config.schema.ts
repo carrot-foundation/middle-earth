@@ -28,6 +28,7 @@ export const envSchema = z.object({
   NOTION_TOKEN_SECRET_ARN: z.string().min(1),
   GMAIL_SECRET_ARN: z.string().min(1),
   PROXY_SECRET_ARN: z.string().min(1),
+  FIRECRAWL_API_KEY_SECRET_ARN: z.string().optional(),
   SLACK_CHANNEL_ID: z.string().default('C0ADBQGHMDH'),
   NOTION_DATABASE_ID: z.string().default('2a09703d-8e9c-8193-b638-f7bb6b1c7cd8'),
   GMAIL_TO: z.string().default('market-intelligence@carrot.eco'),
