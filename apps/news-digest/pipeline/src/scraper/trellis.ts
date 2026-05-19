@@ -1,312 +1,229 @@
-import { chromium } from 'playwright';
-import type { Browser, Page } from 'playwright';
 import { THEMES } from '../config.constants.js';
 import { curateTrellisArticles, type TrellisCandidate } from '../ai/trellis-curator.js';
+import { sanitizeArticleText } from '../helpers/content.helpers.js';
+import { FirecrawlError, firecrawlScrape, firecrawlSearch } from '../helpers/firecrawl.helpers.js';
 import type { RawArticle, ThemeConfig } from '../types.js';
 
-const SEARCH_URL = 'https://trellis.net/?s=';
-const LISTING_URL = 'https://trellis.net/articles/';
-const HOMEPAGE_URL = 'https://trellis.net/';
 const MAX_ARTICLES_PER_THEME = 1;
 const MAX_ARTICLE_AGE_DAYS = 30;
 const CANDIDATE_POOL_SIZE = 15;
+const SEARCH_LIMIT = 10;
 const MAX_EXCERPT_LENGTH = 400;
+// The curator (not a per-theme query) decides which of these are worth the
+// digest; keep the discovery query broad and recency-biased, scoped to Trellis.
+const CURATION_QUERY = 'site:trellis.net climate sustainability decarbonization circular economy';
 
-export const TRELLIS_CONTENT_SELECTORS = [
-  '.post-content',
-  'article',
-  'main',
-] as const;
-
-interface SearchLink {
-  readonly url: string;
-  readonly title: string;
+function parseDate(raw: string): string {
+  if (!raw) return '';
+  const parsed = new Date(raw);
+  if (Number.isNaN(parsed.getTime())) return '';
+  return parsed.toISOString().slice(0, 10);
 }
 
-interface ArticleExtract {
-  readonly content: string;
-  readonly date: string;
-  readonly author: string;
-}
-
-interface ListingItem {
-  readonly url: string;
-  readonly title: string;
-  readonly date: string;   // may be empty if not in listing DOM
-  readonly excerpt: string; // may be empty if not in listing DOM
-}
-
-function todayIso(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function isTooOld(dateIso: string): boolean {
-  const ts = new Date(dateIso).getTime();
-  if (Number.isNaN(ts)) return false;
-  return Date.now() - ts > MAX_ARTICLE_AGE_DAYS * 24 * 60 * 60 * 1000;
-}
-
-async function extractSearchLinks(page: Page): Promise<SearchLink[]> {
-  return page.evaluate(() => {
-    const anchors = Array.from(document.querySelectorAll<HTMLAnchorElement>('a[href*="/article/"]'));
-    const seen = new Set<string>();
-    const out: SearchLink[] = [];
-    for (const a of anchors) {
-      const href = a.href;
-      if (!href || seen.has(href)) continue;
-      const title = (a.textContent ?? '').trim();
-      if (!title) continue;
-      seen.add(href);
-      out.push({ url: href, title });
-    }
-    return out;
-  });
-}
-
-async function extractArticle(page: Page): Promise<ArticleExtract> {
-  return page.evaluate((selectors: readonly string[]) => {
-    // Trellis wraps the article header, byline, image caption, author bio,
-    // newsletter signup, "Featured Reports", "Coming up" and "Recommended"
-    // widgets all inside <article class="post-type-post">. Scoping to
-    // .post-content (the body div) is what keeps sidebar paragraphs out.
-    let container: Element | null = null;
-    for (const selector of selectors) {
-      container = document.querySelector(selector);
-      if (container) break;
-    }
-    container = container ?? document.body;
-
-    // Collapse internal whitespace runs so any sidebar <p> that slips through
-    // a future selector change cannot reintroduce tab/space blocks.
-    const paragraphs = Array.from(container.querySelectorAll('p'))
-      .map((paragraph) => (paragraph.textContent ?? '').replace(/\s+/g, ' ').trim())
-      .filter((text) => text.length > 0);
-    const fallback = (container.textContent ?? '').replace(/\s+/g, ' ').trim();
-    const content = paragraphs.length > 0 ? paragraphs.join('\n\n') : fallback;
-
-    const publishedMeta = document
-      .querySelector('meta[property="article:published_time"]')
-      ?.getAttribute('content') ?? '';
-    const timeAttr = document.querySelector('time')?.getAttribute('datetime') ?? '';
-    const date = (publishedMeta || timeAttr).slice(0, 10);
-
-    const authorMeta = document.querySelector('meta[name="author"]')?.getAttribute('content') ?? '';
-    const bylineEl = document.querySelector('.author, .byline, [rel="author"]');
-    const author = authorMeta || (bylineEl?.textContent ?? '').trim();
-
-    return { content, date, author };
-  }, [...TRELLIS_CONTENT_SELECTORS]);
-}
-
-async function extractListing(page: Page): Promise<ListingItem[]> {
-  return page.evaluate((maxExcerpt: number) => {
-    const anchors = Array.from(document.querySelectorAll<HTMLAnchorElement>('a[href*="/article/"]'));
-    const seen = new Set<string>();
-    const out: ListingItem[] = [];
-    for (const a of anchors) {
-      const href = a.href;
-      if (!href || seen.has(href)) continue;
-      const title = (a.textContent ?? '').trim();
-      if (!title) continue;
-      // Probe for adjacent date/excerpt in the listing DOM.
-      const card = a.closest('article, li, .post, .card') ?? a.parentElement;
-      const timeAttr = card?.querySelector('time')?.getAttribute('datetime') ?? '';
-      const dekEl = card?.querySelector('.dek, .excerpt, .summary, p');
-      const excerpt = ((dekEl?.textContent ?? '').trim()).slice(0, maxExcerpt);
-      seen.add(href);
-      out.push({ url: href, title, date: timeAttr.slice(0, 10), excerpt });
-    }
-    return out;
-  }, MAX_EXCERPT_LENGTH);
-}
-
-async function scrapeThemeSearch(
-  page: Page,
-  theme: ThemeConfig,
-  processedUrls: ReadonlySet<string>,
-): Promise<RawArticle[]> {
-  const searchUrl = `${SEARCH_URL}${encodeURIComponent(theme.trellisSearchTerms)}`;
+// Trellis articles live at trellis.net/article/...; the old Playwright code only
+// ever followed `a[href*="/article/"]`. Require both an in-domain host and the
+// article path so a search provider can't steer us to an arbitrary URL.
+function isTrellisArticleUrl(url: string): boolean {
+  let parsed: URL;
   try {
-    await page.goto(searchUrl, { waitUntil: 'domcontentloaded' });
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'unknown';
-    console.error(`[Trellis] Theme search failed for "${theme.name}": ${message}`);
-    return [];
+    parsed = new URL(url);
+  } catch {
+    return false;
   }
-
-  const links = await extractSearchLinks(page);
-  const fresh = links.filter((l) => !processedUrls.has(l.url)).slice(0, MAX_ARTICLES_PER_THEME);
-
-  const articles: RawArticle[] = [];
-  for (const link of fresh) {
-    try {
-      await page.goto(link.url, { waitUntil: 'domcontentloaded' });
-      const extracted = await extractArticle(page);
-      const date = extracted.date || todayIso();
-      if (isTooOld(date)) {
-        console.warn(`[Trellis] Article too old (${date}), skipping: ${link.url}`);
-        continue;
-      }
-      articles.push({
-        source: 'trellis',
-        url: link.url,
-        title: link.title,
-        date,
-        author: extracted.author || 'Trellis',
-        mainTheme: theme.name,
-        categories: '',
-        location: '',
-        fullContent: extracted.content,
-      });
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'unknown';
-      console.error(`[Trellis] Failed to extract "${link.title}": ${message}`);
-    }
-  }
-  return articles;
+  const host = parsed.hostname.toLowerCase();
+  if (host !== 'trellis.net' && !host.endsWith('.trellis.net')) return false;
+  return parsed.pathname.includes('/article/');
 }
 
-async function fetchCandidateMetadata(
-  page: Page,
-  item: ListingItem,
-): Promise<TrellisCandidate | null> {
-  // Happy path: listing DOM supplied both date and excerpt.
-  if (item.date && item.excerpt) {
-    if (isTooOld(item.date)) return null;
-    return { url: item.url, title: item.title, date: item.date, excerpt: item.excerpt };
-  }
+function isQuotaError(error: unknown): boolean {
+  return (
+    error instanceof FirecrawlError && (error.status === 402 || error.status === 429)
+  );
+}
 
-  // Fallback: navigate to the article to read meta tags.
-  try {
-    await page.goto(item.url, { waitUntil: 'domcontentloaded' });
-    const extracted = await page.evaluate((maxExcerpt: number) => {
-      const publishedMeta = document
-        .querySelector('meta[property="article:published_time"]')
-        ?.getAttribute('content') ?? '';
-      const timeAttr = document.querySelector('time')?.getAttribute('datetime') ?? '';
-      const date = (publishedMeta || timeAttr).slice(0, 10);
-      const descMeta = document.querySelector('meta[name="description"]')?.getAttribute('content') ?? '';
-      const firstP = document.querySelector('article p')?.textContent ?? '';
-      const excerpt = (descMeta || firstP).trim().slice(0, maxExcerpt);
-      return { date, excerpt };
-    }, MAX_EXCERPT_LENGTH);
-    const date = extracted.date || todayIso();
-    if (isTooOld(date)) return null;
-    return {
-      url: item.url,
-      title: item.title,
-      date,
-      excerpt: extracted.excerpt,
-    };
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'unknown';
-    console.warn(`[Trellis] Candidate metadata fetch failed for ${item.url}: ${message}`);
+/**
+ * Scrape one Trellis URL into a RawArticle, applying the shared freshness +
+ * sanitization barrier. Returns null for skip conditions (undated, too old,
+ * empty after sanitization). Throws FirecrawlError so callers can handle
+ * quota/rate-limit (402/429) by aborting their loop while keeping partials.
+ */
+async function scrapeArticle(
+  url: string,
+  title: string,
+  mainTheme: string,
+  apiKey: string,
+): Promise<RawArticle | null> {
+  const scraped = await firecrawlScrape(url, apiKey);
+  // No reliable publish date — skip rather than stamp it "today" and let a
+  // stale article bypass the freshness window (parity with esg/carbon-pulse).
+  const articleDate = parseDate(scraped.publishedTime);
+  if (!articleDate) {
+    console.warn(`[Trellis] Missing/invalid publish date, skipping: ${url}`);
     return null;
   }
+  const ageMs = Date.now() - new Date(articleDate).getTime();
+  if (ageMs > MAX_ARTICLE_AGE_DAYS * 24 * 60 * 60 * 1000) {
+    console.warn(`[Trellis] Article too old (${articleDate}), skipping: ${url}`);
+    return null;
+  }
+  const cleanContent = sanitizeArticleText(scraped.markdown);
+  if (!cleanContent) {
+    console.warn(`[Trellis] No article body after sanitization, skipping: ${url}`);
+    return null;
+  }
+  return {
+    source: 'trellis',
+    url,
+    title,
+    date: articleDate,
+    author: scraped.author || 'Trellis',
+    mainTheme,
+    categories: '',
+    location: '',
+    fullContent: cleanContent,
+  };
 }
 
-async function collectHomepageCandidates(
-  page: Page,
+interface ThemeSearchResult {
+  readonly articles: RawArticle[];
+  readonly quotaExhausted: boolean;
+}
+
+async function searchTheme(
+  theme: ThemeConfig,
+  processedUrls: ReadonlySet<string>,
+  apiKey: string,
+): Promise<ThemeSearchResult> {
+  const results = await firecrawlSearch(
+    `site:trellis.net ${theme.trellisSearchTerms}`,
+    apiKey,
+    SEARCH_LIMIT,
+  );
+
+  const seen = new Set<string>();
+  const candidates = results.filter((result) => {
+    if (!isTrellisArticleUrl(result.url)) return false;
+    if (processedUrls.has(result.url) || seen.has(result.url)) return false;
+    seen.add(result.url);
+    return true;
+  });
+
+  // Cap on *successful* extractions, not raw candidates.
+  const articles: RawArticle[] = [];
+  for (const candidate of candidates) {
+    if (articles.length >= MAX_ARTICLES_PER_THEME) break;
+    try {
+      const article = await scrapeArticle(candidate.url, candidate.title, theme.name, apiKey);
+      if (article) articles.push(article);
+    } catch (error: unknown) {
+      if (isQuotaError(error)) {
+        console.error(
+          `[Trellis] Firecrawl quota/rate limit — aborting theme, keeping ${articles.length} collected`,
+        );
+        return { articles, quotaExhausted: true };
+      }
+      const message = error instanceof Error ? error.message : 'unknown';
+      console.error(`[Trellis] Failed to extract "${candidate.title}": ${message}`);
+    }
+  }
+  return { articles, quotaExhausted: false };
+}
+
+async function collectCandidates(
   excludeUrls: ReadonlySet<string>,
+  apiKey: string,
 ): Promise<TrellisCandidate[]> {
-  // Prefer /articles/ listing; fall back to homepage.
-  let listingLoaded = false;
-  try {
-    await page.goto(LISTING_URL, { waitUntil: 'domcontentloaded' });
-    listingLoaded = true;
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'unknown';
-    console.warn(`[Trellis] /articles/ listing unavailable (${message}), falling back to homepage`);
-  }
-
-  if (!listingLoaded) {
-    await page.goto(HOMEPAGE_URL, { waitUntil: 'domcontentloaded' });
-  }
-
-  const items = await extractListing(page);
+  // Over-request: host/exclude/dedup filtering below would otherwise shrink the
+  // pool below CANDIDATE_POOL_SIZE with no top-up.
+  const results = await firecrawlSearch(CURATION_QUERY, apiKey, CANDIDATE_POOL_SIZE * 2);
+  const seen = new Set<string>();
   const candidates: TrellisCandidate[] = [];
-  for (const item of items) {
-    if (excludeUrls.has(item.url)) continue;
-    const candidate = await fetchCandidateMetadata(page, item);
-    if (candidate) candidates.push(candidate);
+  for (const result of results) {
+    if (!isTrellisArticleUrl(result.url)) continue;
+    if (excludeUrls.has(result.url) || seen.has(result.url)) continue;
+    seen.add(result.url);
+    // date is enforced later at the pick scrape; the curator ranks on
+    // title+excerpt and only prefers recency "when relevance is similar".
+    candidates.push({
+      url: result.url,
+      title: result.title,
+      date: '',
+      excerpt: (result.description || result.title).slice(0, MAX_EXCERPT_LENGTH),
+    });
     if (candidates.length >= CANDIDATE_POOL_SIZE) break;
   }
   return candidates;
-}
-
-async function scrapeCuratedPick(
-  page: Page,
-  candidate: TrellisCandidate,
-  mainTheme: string,
-): Promise<RawArticle | null> {
-  try {
-    await page.goto(candidate.url, { waitUntil: 'domcontentloaded' });
-    const extracted = await extractArticle(page);
-    const date = extracted.date || candidate.date || todayIso();
-    if (isTooOld(date)) {
-      console.warn(`[Trellis] Curated pick too old (${date}), skipping: ${candidate.url}`);
-      return null;
-    }
-    return {
-      source: 'trellis',
-      url: candidate.url,
-      title: candidate.title,
-      date,
-      author: extracted.author || 'Trellis',
-      mainTheme,
-      categories: '',
-      location: '',
-      fullContent: extracted.content,
-    };
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'unknown';
-    console.error(`[Trellis] Failed to extract curated pick ${candidate.url}: ${message}`);
-    return null;
-  }
 }
 
 export async function scrapeTrellis(
   themes: readonly ThemeConfig[],
   processedUrls: ReadonlySet<string>,
   anthropicApiKey: string,
+  firecrawlApiKey: string,
 ): Promise<RawArticle[]> {
-  const browser: Browser = await chromium.launch({ headless: true });
-  try {
-    const page = await browser.newPage();
+  if (!firecrawlApiKey) {
+    throw new Error('FIRECRAWL_API_KEY not configured — Trellis scraping skipped');
+  }
 
-    const perTheme: RawArticle[] = [];
-    for (const theme of themes) {
-      console.log(`[Trellis] Searching: ${theme.name}`);
-      const themeArticles = await scrapeThemeSearch(page, theme, processedUrls);
-      perTheme.push(...themeArticles);
-      console.log(`[Trellis] Found ${themeArticles.length} article(s) for ${theme.name}`);
-    }
-
-    const exclude = new Set<string>([...processedUrls, ...perTheme.map((a) => a.url)]);
-    let curated: RawArticle[] = [];
+  const perTheme: RawArticle[] = [];
+  let quotaExhausted = false;
+  for (const theme of themes) {
+    console.log(`[Trellis] Searching: ${theme.name}`);
     try {
-      const candidates = await collectHomepageCandidates(page, exclude);
-      if (candidates.length > 0) {
-        const candidateByUrl = new Map(candidates.map((c) => [c.url, c]));
-        const allThemeNames = THEMES.map((t) => t.name);
-        const picks = await curateTrellisArticles(candidates, allThemeNames, anthropicApiKey);
-        for (const pick of picks) {
-          const candidate = candidateByUrl.get(pick.url);
-          if (!candidate) continue;
-          const article = await scrapeCuratedPick(page, candidate, pick.mainTheme);
-          if (article) curated.push(article);
-        }
-      } else {
-        console.warn('[Trellis] No homepage candidates collected; skipping curation.');
+      const result = await searchTheme(theme, processedUrls, firecrawlApiKey);
+      perTheme.push(...result.articles);
+      console.log(`[Trellis] Found ${result.articles.length} article(s) for ${theme.name}`);
+      if (result.quotaExhausted) {
+        quotaExhausted = true;
+        break;
       }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'unknown';
-      console.warn(`[Trellis] Curation flow failed: ${message}`);
-      curated = [];
+      console.error(`[Trellis] Search failed for "${theme.name}": ${message}`);
     }
-
-    return [...perTheme, ...curated];
-  } finally {
-    await browser.close();
   }
+
+  // Out of Firecrawl credits — don't spend an Anthropic call + more scrapes on
+  // the curation flow that would only hit the same wall.
+  if (quotaExhausted) {
+    console.warn('[Trellis] Firecrawl quota exhausted — skipping curation flow.');
+    return [...perTheme];
+  }
+
+  const exclude = new Set<string>([...processedUrls, ...perTheme.map((article) => article.url)]);
+  const curated: RawArticle[] = [];
+  try {
+    const candidates = await collectCandidates(exclude, firecrawlApiKey);
+    if (candidates.length === 0) {
+      console.warn('[Trellis] No curation candidates collected; skipping curation.');
+    } else {
+      const candidateByUrl = new Map(candidates.map((candidate) => [candidate.url, candidate]));
+      const allThemeNames = THEMES.map((theme) => theme.name);
+      const picks = await curateTrellisArticles(candidates, allThemeNames, anthropicApiKey);
+      const scrapedPickUrls = new Set<string>();
+      for (const pick of picks) {
+        const candidate = candidateByUrl.get(pick.url);
+        if (!candidate || scrapedPickUrls.has(pick.url)) continue;
+        scrapedPickUrls.add(pick.url);
+        try {
+          const article = await scrapeArticle(candidate.url, candidate.title, pick.mainTheme, firecrawlApiKey);
+          if (article) curated.push(article);
+        } catch (error: unknown) {
+          if (isQuotaError(error)) {
+            console.error(
+              `[Trellis] Firecrawl quota/rate limit on curated pick — keeping ${curated.length} collected`,
+            );
+            break;
+          }
+          const message = error instanceof Error ? error.message : 'unknown';
+          console.error(`[Trellis] Failed to extract curated pick ${candidate.url}: ${message}`);
+        }
+      }
+    }
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'unknown';
+    console.warn(`[Trellis] Curation flow failed: ${message}`);
+  }
+
+  return [...perTheme, ...curated];
 }

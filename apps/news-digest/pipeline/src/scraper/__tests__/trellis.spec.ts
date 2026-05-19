@@ -1,21 +1,16 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import type { ThemeConfig } from '../../types.js';
-
-vi.mock('playwright', () => ({
-  chromium: {
-    launch: vi.fn(),
-  },
-}));
 
 vi.mock('../../ai/trellis-curator.js', () => ({
   curateTrellisArticles: vi.fn(),
 }));
 
-import { chromium } from 'playwright';
 import { curateTrellisArticles } from '../../ai/trellis-curator.js';
-import { scrapeTrellis, TRELLIS_CONTENT_SELECTORS } from '../trellis.js';
+import { THEMES } from '../../config.constants.js';
+import { scrapeTrellis } from '../trellis.js';
 
-const TODAY_ISO = new Date().toISOString().slice(0, 10);
+const KEY = 'fc-test-key';
+const ANTHROPIC = 'sk-test';
 
 function stubTheme(overrides: Partial<ThemeConfig> = {}): ThemeConfig {
   return {
@@ -28,274 +23,367 @@ function stubTheme(overrides: Partial<ThemeConfig> = {}): ThemeConfig {
   };
 }
 
-interface MockPageConfig {
-  gotoCalls?: string[];
-  evaluations?: Array<(url: string) => unknown>;
+function daysAgoIso(days: number): string {
+  return new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
 }
 
-function mockBrowser(config: MockPageConfig) {
-  const gotoCalls: string[] = config.gotoCalls ?? [];
-  const evalQueue = [...(config.evaluations ?? [])];
-  const page = {
-    goto: vi.fn(async (url: string) => {
-      gotoCalls.push(url);
-      return null;
+type WebResult = { url: string; title: string; description?: string };
+type ScrapeEntry =
+  | { markdown: string; publishedTime?: string; author?: string }
+  | { status: number };
+
+function installFetch(opts: {
+  search: (query: string) => WebResult[];
+  scrape: Record<string, ScrapeEntry>;
+}): void {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (url: string, init: { body: string }) => {
+      const body = JSON.parse(init.body) as { query?: string; url?: string };
+      if (url.endsWith('/v2/search')) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ data: { web: opts.search(body.query ?? '') } }),
+        };
+      }
+      const entry = opts.scrape[body.url ?? ''];
+      if (!entry || 'status' in entry) {
+        return { ok: false, status: entry ? entry.status : 404, json: async () => ({}) };
+      }
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          data: {
+            markdown: entry.markdown,
+            metadata: {
+              'article:published_time': entry.publishedTime ?? daysAgoIso(2),
+              author: entry.author ?? '',
+            },
+          },
+        }),
+      };
     }),
-    evaluate: vi.fn(async (fn: () => unknown) => {
-      if (evalQueue.length === 0) return null;
-      const current = evalQueue.shift();
-      return current ? current(gotoCalls[gotoCalls.length - 1] ?? '') : null;
-    }),
-  };
-  const browser = {
-    newPage: vi.fn(async () => page),
-    close: vi.fn(async () => undefined),
-  };
-  vi.mocked(chromium.launch).mockResolvedValue(browser as never);
-  return { browser, page, gotoCalls };
+  );
 }
+
+const isCuration = (query: string): boolean => query.includes('decarbonization circular economy');
 
 describe('scrapeTrellis', () => {
-  beforeEach(() => {
-    vi.mocked(curateTrellisArticles).mockResolvedValue([]);
-  });
-
   afterEach(() => {
+    vi.unstubAllGlobals();
     vi.clearAllMocks();
   });
 
-  it('extracts one article per theme using MAX_ARTICLES_PER_THEME=1', async () => {
-    mockBrowser({
-      evaluations: [
-        // Per-theme search page: list of article links.
-        () => [
-          { url: 'https://trellis.net/article/a1/', title: 'Article A1' },
-          { url: 'https://trellis.net/article/a2/', title: 'Article A2' },
-        ],
-        // Article A1 page: content + date + author.
-        () => ({
-          content: 'Full text of A1.',
-          date: TODAY_ISO,
-          author: 'Author A',
-        }),
-        // Homepage candidates (empty).
-        () => [],
-      ],
+  it('extracts a sanitized RawArticle per theme and strips chrome', async () => {
+    vi.mocked(curateTrellisArticles).mockResolvedValue([]);
+    installFetch({
+      search: (q) => (isCuration(q) ? [] : [{ url: 'https://trellis.net/article/a/', title: 'A' }]),
+      scrape: {
+        'https://trellis.net/article/a/': {
+          markdown:
+            'Share on Facebook\nSubscribe & Follow\n' +
+            'Trellis reports a major circular-economy policy shift this quarter.\n' +
+            'RELATED ARTICLE: Something Else',
+          author: 'Jane Doe',
+          publishedTime: daysAgoIso(3),
+        },
+      },
     });
-    const result = await scrapeTrellis([stubTheme()], new Set(), 'test-key');
+
+    const result = await scrapeTrellis([stubTheme()], new Set(), ANTHROPIC, KEY);
+
     expect(result).toHaveLength(1);
-    expect(result[0]?.source).toBe('trellis');
-    expect(result[0]?.url).toBe('https://trellis.net/article/a1/');
-    expect(result[0]?.title).toBe('Article A1');
-    expect(result[0]?.mainTheme).toBe('Carbon Markets');
-    expect(result[0]?.author).toBe('Author A');
-    expect(result[0]?.fullContent).toBe('Full text of A1.');
+    expect(result[0]!.source).toBe('trellis');
+    expect(result[0]!.author).toBe('Jane Doe');
+    expect(result[0]!.fullContent).toContain('circular-economy policy shift');
+    expect(result[0]!.fullContent).not.toMatch(/Share on Facebook|Subscribe & Follow|RELATED ARTICLE:/);
   });
 
-  it('skips URLs already in processedUrls', async () => {
-    mockBrowser({
-      evaluations: [
-        () => [
-          { url: 'https://trellis.net/article/a1/', title: 'Already Seen' },
-          { url: 'https://trellis.net/article/a2/', title: 'Fresh' },
-        ],
-        () => ({ content: 'Fresh content.', date: TODAY_ISO, author: 'Author A2' }),
-        () => [],
-      ],
+  it('skips URLs already in processedUrls (no scrape)', async () => {
+    vi.mocked(curateTrellisArticles).mockResolvedValue([]);
+    installFetch({
+      search: (q) => (isCuration(q) ? [] : [{ url: 'https://trellis.net/article/seen/', title: 'Seen' }]),
+      scrape: {},
     });
-    const seen = new Set(['https://trellis.net/article/a1/']);
-    const result = await scrapeTrellis([stubTheme()], seen, 'test-key');
-    expect(result).toHaveLength(1);
-    expect(result[0]?.url).toBe('https://trellis.net/article/a2/');
-  });
-
-  it('skips articles older than MAX_ARTICLE_AGE_DAYS (30) days', async () => {
-    const oldDate = new Date(Date.now() - 40 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-    mockBrowser({
-      evaluations: [
-        () => [{ url: 'https://trellis.net/article/old/', title: 'Old' }],
-        () => ({ content: 'Old content.', date: oldDate, author: 'Old Author' }),
-        () => [],
-      ],
-    });
-    const result = await scrapeTrellis([stubTheme()], new Set(), 'test-key');
+    const result = await scrapeTrellis(
+      [stubTheme()],
+      new Set(['https://trellis.net/article/seen/']),
+      ANTHROPIC,
+      KEY,
+    );
     expect(result).toHaveLength(0);
   });
 
-  it('falls back to default author "Trellis" when no author metadata is present', async () => {
-    mockBrowser({
-      evaluations: [
-        () => [{ url: 'https://trellis.net/article/a/', title: 'T' }],
-        () => ({ content: 'Content.', date: TODAY_ISO, author: '' }),
-        () => [],
-      ],
+  it('skips undated and too-old articles', async () => {
+    vi.mocked(curateTrellisArticles).mockResolvedValue([]);
+    installFetch({
+      search: (q) =>
+        isCuration(q)
+          ? []
+          : [
+              { url: 'https://trellis.net/article/undated/', title: 'Undated' },
+              { url: 'https://trellis.net/article/old/', title: 'Old' },
+            ],
+      scrape: {
+        'https://trellis.net/article/undated/': { markdown: 'Valid body, no date.', publishedTime: '' },
+        'https://trellis.net/article/old/': {
+          markdown: 'Valid body, ancient.',
+          publishedTime: daysAgoIso(200),
+        },
+      },
     });
-    const result = await scrapeTrellis([stubTheme()], new Set(), 'test-key');
-    expect(result[0]?.author).toBe('Trellis');
+    const result = await scrapeTrellis([stubTheme()], new Set(), ANTHROPIC, KEY);
+    expect(result).toHaveLength(0);
   });
 
-  it('falls back to today when no date metadata is present', async () => {
-    mockBrowser({
-      evaluations: [
-        () => [{ url: 'https://trellis.net/article/a/', title: 'T' }],
-        () => ({ content: 'Content.', date: '', author: 'A' }),
-        () => [],
-      ],
+  it('skips a page that sanitizes to empty (chrome-only)', async () => {
+    vi.mocked(curateTrellisArticles).mockResolvedValue([]);
+    installFetch({
+      search: (q) => (isCuration(q) ? [] : [{ url: 'https://trellis.net/article/chrome/', title: 'Chrome' }]),
+      scrape: {
+        'https://trellis.net/article/chrome/': {
+          markdown: 'Share on Facebook\nSubscribe & Follow\nRELATED ARTICLE: x',
+          publishedTime: daysAgoIso(1),
+        },
+      },
     });
-    const result = await scrapeTrellis([stubTheme()], new Set(), 'test-key');
-    expect(result[0]?.date).toBe(TODAY_ISO);
+    const result = await scrapeTrellis([stubTheme()], new Set(), ANTHROPIC, KEY);
+    expect(result).toHaveLength(0);
   });
 
-  it('adds curated picks returned by the curator as RawArticles', async () => {
-    mockBrowser({
-      evaluations: [
-        // Per-theme search returns no links.
-        () => [],
-        // Homepage candidates: two links with listing-DOM metadata.
-        () => [
-          { url: 'https://trellis.net/article/c1/', title: 'C1 title', date: TODAY_ISO, excerpt: 'C1 excerpt' },
-          { url: 'https://trellis.net/article/c2/', title: 'C2 title', date: TODAY_ISO, excerpt: 'C2 excerpt' },
-        ],
-        // Curated pick c1: full content fetch.
-        () => ({ content: 'C1 body.', date: TODAY_ISO, author: 'C1 Author' }),
-        // Curated pick c2: full content fetch.
-        () => ({ content: 'C2 body.', date: TODAY_ISO, author: 'C2 Author' }),
-      ],
+  it('continues other themes when one theme search fails', async () => {
+    vi.mocked(curateTrellisArticles).mockResolvedValue([]);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string, init: { body: string }) => {
+        const body = JSON.parse(init.body) as { query?: string; url?: string };
+        if (url.endsWith('/v2/search')) {
+          if ((body.query ?? '').includes('boom')) {
+            return { ok: false, status: 500, json: async () => ({}) };
+          }
+          if (isCuration(body.query ?? '')) {
+            return { ok: true, status: 200, json: async () => ({ data: { web: [] } }) };
+          }
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({ data: { web: [{ url: 'https://trellis.net/article/ok/', title: 'OK' }] } }),
+          };
+        }
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            data: {
+              markdown: 'A solid Trellis article body about composting policy.',
+              metadata: { 'article:published_time': daysAgoIso(2), author: 'Trellis' },
+            },
+          }),
+        };
+      }),
+    );
+
+    const result = await scrapeTrellis(
+      [stubTheme({ name: 'Bad', trellisSearchTerms: 'boom' }), stubTheme({ name: 'Good' })],
+      new Set(),
+      ANTHROPIC,
+      KEY,
+    );
+
+    expect(result).toHaveLength(1);
+    expect(result[0]!.mainTheme).toBe('Good');
+  });
+
+  it('adds curated picks (excerpt from search description, all THEMES passed to curator)', async () => {
+    installFetch({
+      search: (q) =>
+        isCuration(q)
+          ? [
+              { url: 'https://trellis.net/article/c1/', title: 'Cand 1', description: 'Excerpt one.' },
+              { url: 'https://trellis.net/article/c2/', title: 'Cand 2', description: 'Excerpt two.' },
+            ]
+          : [],
+      scrape: {
+        'https://trellis.net/article/c1/': {
+          markdown: 'Curated article one body about methane abatement.',
+          publishedTime: daysAgoIso(1),
+        },
+      },
     });
-    vi.mocked(curateTrellisArticles).mockResolvedValueOnce([
-      { url: 'https://trellis.net/article/c1/', mainTheme: 'Carbon Markets' },
-      { url: 'https://trellis.net/article/c2/', mainTheme: 'Methane & Super Pollutants' },
+    vi.mocked(curateTrellisArticles).mockResolvedValue([
+      { url: 'https://trellis.net/article/c1/', mainTheme: 'Methane & Super Pollutants' },
     ]);
 
-    const result = await scrapeTrellis([stubTheme()], new Set(), 'test-key');
-    expect(result).toHaveLength(2);
-    expect(result.map((a) => a.url)).toEqual([
-      'https://trellis.net/article/c1/',
-      'https://trellis.net/article/c2/',
-    ]);
-    expect(result[0]?.mainTheme).toBe('Carbon Markets');
-    expect(result[1]?.mainTheme).toBe('Methane & Super Pollutants');
-    expect(result.every((a) => a.source === 'trellis')).toBe(true);
+    const result = await scrapeTrellis([stubTheme()], new Set(), ANTHROPIC, KEY);
+
+    expect(result).toHaveLength(1);
+    expect(result[0]!.url).toBe('https://trellis.net/article/c1/');
+    expect(result[0]!.mainTheme).toBe('Methane & Super Pollutants');
+
+    const [candidates, themeNames] = vi.mocked(curateTrellisArticles).mock.calls[0]!;
+    expect(candidates[0]).toMatchObject({
+      url: 'https://trellis.net/article/c1/',
+      title: 'Cand 1',
+      excerpt: 'Excerpt one.',
+      date: '',
+    });
+    expect(themeNames).toEqual(THEMES.map((theme) => theme.name));
   });
 
-  it('returns only per-theme articles if the curator returns zero picks', async () => {
-    mockBrowser({
-      evaluations: [
-        () => [{ url: 'https://trellis.net/article/a/', title: 'A' }],
-        () => ({ content: 'Body.', date: TODAY_ISO, author: 'Author' }),
-        () => [
-          { url: 'https://trellis.net/article/c/', title: 'C', date: TODAY_ISO, excerpt: 'C excerpt' },
-        ],
-      ],
+  it('does not call the curator when the candidate pool is empty', async () => {
+    installFetch({
+      search: (q) => (isCuration(q) ? [] : [{ url: 'https://trellis.net/article/t/', title: 'T' }]),
+      scrape: {
+        'https://trellis.net/article/t/': {
+          markdown: 'A per-theme Trellis article body about waste policy.',
+          publishedTime: daysAgoIso(1),
+        },
+      },
     });
-    vi.mocked(curateTrellisArticles).mockResolvedValueOnce([]);
 
-    const result = await scrapeTrellis([stubTheme()], new Set(), 'test-key');
+    const result = await scrapeTrellis([stubTheme()], new Set(), ANTHROPIC, KEY);
+
     expect(result).toHaveLength(1);
-    expect(result[0]?.url).toBe('https://trellis.net/article/a/');
-  });
-
-  it('returns only per-theme articles if homepage fetch throws', async () => {
-    const { page } = mockBrowser({
-      evaluations: [
-        () => [{ url: 'https://trellis.net/article/a/', title: 'A' }],
-        () => ({ content: 'Body.', date: TODAY_ISO, author: 'Author' }),
-      ],
-    });
-    // After the per-theme article page.goto + evaluate pair, the 3rd goto is for the homepage.
-    // Make that goto reject.
-    let gotoCount = 0;
-    page.goto.mockImplementation(async (url: string) => {
-      gotoCount += 1;
-      if (gotoCount >= 3) throw new Error('homepage unreachable');
-      return null;
-    });
-
-    const result = await scrapeTrellis([stubTheme()], new Set(), 'test-key');
-    expect(result).toHaveLength(1);
-    expect(result[0]?.url).toBe('https://trellis.net/article/a/');
     expect(vi.mocked(curateTrellisArticles)).not.toHaveBeenCalled();
   });
 
-  it('passes all themes (from THEMES config) as allowedThemes to the curator, not just eligible ones', async () => {
-    mockBrowser({
-      evaluations: [
-        // Eligible theme 1 search → empty.
-        () => [],
-        // Eligible theme 2 search → empty.
-        () => [],
-        // Homepage listing → one candidate with listing-DOM metadata.
-        () => [
-          { url: 'https://trellis.net/article/c/', title: 'C', date: TODAY_ISO, excerpt: 'ex' },
-        ],
-      ],
-    });
-    vi.mocked(curateTrellisArticles).mockResolvedValueOnce([]);
-
-    const eligibleThemes = [
-      stubTheme({ name: 'Carbon Markets' }),
-      stubTheme({ name: 'Methane Detection & MRV' }),
-    ];
-    await scrapeTrellis(eligibleThemes, new Set(), 'test-key');
-
-    expect(vi.mocked(curateTrellisArticles)).toHaveBeenCalledTimes(1);
-    const [, themeNames] = vi.mocked(curateTrellisArticles).mock.calls[0]!;
-    // Curator receives the full THEMES list, not just the two eligible ones.
-    // Assert length and presence of themes outside the eligible set.
-    expect(themeNames.length).toBeGreaterThan(eligibleThemes.length);
-    expect(themeNames).toContain('Carbon Markets');
-    expect(themeNames).toContain('Methane Detection & MRV');
-    expect(themeNames).toContain('Verification & Auditing'); // monthly theme, typically not eligible daily
-  });
-
-  it('prefers .post-content over <article> to keep sidebar/author/related widgets out of the body (regression)', () => {
-    // <article class="post-type-post"> on Trellis wraps the article header,
-    // byline, image caption, author bio, newsletter signup, "Featured Reports",
-    // "Coming up" and "Recommended" widgets. Scoping to .post-content first is
-    // what isolates the actual article body. If this list ever drops or
-    // demotes .post-content, articles will again render with sidebar bleed and
-    // huge whitespace runs (the "black areas" bug in Notion).
-    expect(TRELLIS_CONTENT_SELECTORS[0]).toBe('.post-content');
-    expect(TRELLIS_CONTENT_SELECTORS).toContain('article');
-  });
-
-  it('produces clean paragraph text from CSS-layout whitespace (regression)', async () => {
-    // Simulates a Trellis article page where textContent would return leading
-    // spaces/tabs due to flex/grid HTML layout, but paragraph-walking produces
-    // clean trimmed text joined with double newlines.
-    mockBrowser({
-      evaluations: [
-        () => [{ url: 'https://trellis.net/article/whitespace/', title: 'Whitespace Test' }],
-        // The evaluate function in extractArticle walks <p> elements; here we
-        // return the already-normalised result that the real browser would
-        // produce after the fix (paragraph text trimmed and joined with \n\n).
-        () => ({
-          content: 'Corporate demand is driving a boom in farmland carbon credits.\n\nFarmers are increasingly turning to carbon markets.',
-          date: TODAY_ISO,
-          author: 'Jim Giles',
-        }),
-        () => [],
-      ],
-    });
-
-    const result = await scrapeTrellis([stubTheme()], new Set(), 'test-key');
-    const article = result[0];
-
-    expect(article).toBeDefined();
-    expect(article?.fullContent).not.toMatch(/^\s{2,}/m); // no lines starting with 2+ spaces
-    expect(article?.fullContent).toContain('Corporate demand is driving a boom in farmland carbon credits.');
-    expect(article?.fullContent).toContain('Farmers are increasingly turning to carbon markets.');
-    expect(article?.fullContent).toBe(
-      'Corporate demand is driving a boom in farmland carbon credits.\n\nFarmers are increasingly turning to carbon markets.',
+  it('returns only per-theme articles when the curation search fails (resilience)', async () => {
+    vi.mocked(curateTrellisArticles).mockResolvedValue([]);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string, init: { body: string }) => {
+        const body = JSON.parse(init.body) as { query?: string };
+        if (url.endsWith('/v2/search')) {
+          if (isCuration(body.query ?? '')) return { ok: false, status: 500, json: async () => ({}) };
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({ data: { web: [{ url: 'https://trellis.net/article/pt/', title: 'PT' }] } }),
+          };
+        }
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            data: {
+              markdown: 'Per-theme body about circular economy in depth.',
+              metadata: { 'article:published_time': daysAgoIso(1), author: 'Trellis' },
+            },
+          }),
+        };
+      }),
     );
+
+    const result = await scrapeTrellis([stubTheme()], new Set(), ANTHROPIC, KEY);
+
+    expect(result).toHaveLength(1);
+    expect(result[0]!.url).toBe('https://trellis.net/article/pt/');
+    expect(vi.mocked(curateTrellisArticles)).not.toHaveBeenCalled();
   });
 
-  it('closes the browser in a finally block even when scraping throws', async () => {
-    const { browser } = mockBrowser({ evaluations: [] });
-    vi.mocked(chromium.launch).mockResolvedValue(browser as never);
-    browser.newPage.mockRejectedValueOnce(new Error('page creation failed'));
+  it('keeps partial curated picks when a later pick hits a quota error', async () => {
+    installFetch({
+      search: (q) =>
+        isCuration(q)
+          ? [
+              { url: 'https://trellis.net/article/good/', title: 'Good', description: 'e' },
+              { url: 'https://trellis.net/article/quota/', title: 'Quota', description: 'e' },
+            ]
+          : [],
+      scrape: {
+        'https://trellis.net/article/good/': {
+          markdown: 'Good curated body about emissions monitoring.',
+          publishedTime: daysAgoIso(1),
+        },
+        'https://trellis.net/article/quota/': { status: 402 },
+      },
+    });
+    vi.mocked(curateTrellisArticles).mockResolvedValue([
+      { url: 'https://trellis.net/article/good/', mainTheme: 'Carbon Markets' },
+      { url: 'https://trellis.net/article/quota/', mainTheme: 'Carbon Markets' },
+    ]);
 
-    await expect(scrapeTrellis([stubTheme()], new Set(), 'test-key')).rejects.toThrow('page creation failed');
-    expect(browser.close).toHaveBeenCalled();
+    const result = await scrapeTrellis([stubTheme()], new Set(), ANTHROPIC, KEY);
+
+    expect(result).toHaveLength(1);
+    expect(result[0]!.url).toBe('https://trellis.net/article/good/');
+  });
+
+  it('skips the curation flow entirely when a per-theme quota error occurs', async () => {
+    installFetch({
+      search: (q) =>
+        isCuration(q)
+          ? [{ url: 'https://trellis.net/article/curated/', title: 'Curated' }]
+          : [{ url: 'https://trellis.net/article/q/', title: 'Q' }],
+      scrape: {
+        'https://trellis.net/article/q/': { status: 402 },
+        'https://trellis.net/article/curated/': {
+          markdown: 'Should never be scraped because quota aborted first.',
+          publishedTime: daysAgoIso(1),
+        },
+      },
+    });
+
+    const result = await scrapeTrellis([stubTheme()], new Set(), ANTHROPIC, KEY);
+
+    expect(result).toHaveLength(0);
+    expect(vi.mocked(curateTrellisArticles)).not.toHaveBeenCalled();
+  });
+
+  it('rejects off-domain and non-article URLs from search results', async () => {
+    vi.mocked(curateTrellisArticles).mockResolvedValue([]);
+    installFetch({
+      search: (q) =>
+        isCuration(q)
+          ? []
+          : [
+              { url: 'https://evil.com/article/x/', title: 'Off domain' },
+              { url: 'https://trellis.net/about/', title: 'Not an article' },
+              { url: 'https://trellis.net/article/ok/', title: 'Valid' },
+            ],
+      scrape: {
+        'https://trellis.net/article/ok/': {
+          markdown: 'A valid Trellis article body about emissions policy.',
+          publishedTime: daysAgoIso(1),
+        },
+      },
+    });
+
+    const result = await scrapeTrellis([stubTheme()], new Set(), ANTHROPIC, KEY);
+
+    expect(result).toHaveLength(1);
+    expect(result[0]!.url).toBe('https://trellis.net/article/ok/');
+  });
+
+  it('deduplicates repeated curator picks (scrapes a URL once)', async () => {
+    installFetch({
+      search: (q) =>
+        isCuration(q)
+          ? [{ url: 'https://trellis.net/article/dup/', title: 'Dup', description: 'e' }]
+          : [],
+      scrape: {
+        'https://trellis.net/article/dup/': {
+          markdown: 'A curated article body about circular economy finance.',
+          publishedTime: daysAgoIso(1),
+        },
+      },
+    });
+    vi.mocked(curateTrellisArticles).mockResolvedValue([
+      { url: 'https://trellis.net/article/dup/', mainTheme: 'Carbon Markets' },
+      { url: 'https://trellis.net/article/dup/', mainTheme: 'Carbon Markets' },
+    ]);
+
+    const result = await scrapeTrellis([stubTheme()], new Set(), ANTHROPIC, KEY);
+
+    expect(result).toHaveLength(1);
+    expect(result[0]!.url).toBe('https://trellis.net/article/dup/');
+  });
+
+  it('throws when the Firecrawl API key is not configured', async () => {
+    await expect(scrapeTrellis([stubTheme()], new Set(), ANTHROPIC, '')).rejects.toThrow(
+      /FIRECRAWL_API_KEY not configured/,
+    );
   });
 });
