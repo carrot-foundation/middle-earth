@@ -10,10 +10,6 @@ const MAX_ARTICLE_AGE_DAYS = 30;
 const CANDIDATE_POOL_SIZE = 15;
 const SEARCH_LIMIT = 10;
 const MAX_EXCERPT_LENGTH = 400;
-// Past-month — matches MAX_ARTICLE_AGE_DAYS. See firecrawl.helpers `tbs` doc;
-// recency-bias is required because Firecrawl /search otherwise returns mostly
-// evergreen pages (2026-05-19 validation: 122/138 ESG candidates "too old").
-const SEARCH_RECENCY = 'qdr:m';
 // The curator (not a per-theme query) decides which of these are worth the
 // digest; keep the discovery query broad and recency-biased, scoped to Trellis.
 const CURATION_QUERY = 'site:trellis.net climate sustainability decarbonization circular economy';
@@ -96,7 +92,6 @@ async function searchTheme(
     `site:trellis.net ${theme.trellisSearchTerms}`,
     apiKey,
     SEARCH_LIMIT,
-    SEARCH_RECENCY,
   );
 
   const seen = new Set<string>();
@@ -134,7 +129,7 @@ async function collectCandidates(
 ): Promise<TrellisCandidate[]> {
   // Over-request: host/exclude/dedup filtering below would otherwise shrink the
   // pool below CANDIDATE_POOL_SIZE with no top-up.
-  const results = await firecrawlSearch(CURATION_QUERY, apiKey, CANDIDATE_POOL_SIZE * 2, SEARCH_RECENCY);
+  const results = await firecrawlSearch(CURATION_QUERY, apiKey, CANDIDATE_POOL_SIZE * 2);
   const seen = new Set<string>();
   const candidates: TrellisCandidate[] = [];
   for (const result of results) {

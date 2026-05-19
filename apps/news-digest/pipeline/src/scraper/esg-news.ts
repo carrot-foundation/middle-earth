@@ -6,10 +6,6 @@ import type { RawArticle, ThemeConfig } from '../types.js';
 const MAX_ARTICLES_PER_THEME = 2;
 const MAX_ARTICLE_AGE_DAYS = 30;
 const SEARCH_LIMIT = 10;
-// Past-month — matches MAX_ARTICLE_AGE_DAYS. Without `tbs` Firecrawl returns
-// mostly evergreen/stale pages; the freshness filter then drops ~97% of them
-// (122/138 "too old" in the 2026-05-19 validation run).
-const SEARCH_RECENCY = 'qdr:m';
 
 function isDuplicateOfCarbonPulse(title: string, cpTitles: readonly string[]): boolean {
   const lowerTitle = title.toLowerCase();
@@ -33,7 +29,6 @@ async function searchAndExtract(
     `site:esgnews.com ${theme.esgNewsSearchTerms}`,
     apiKey,
     SEARCH_LIMIT,
-    SEARCH_RECENCY,
   );
 
   const seen = new Set<string>();
