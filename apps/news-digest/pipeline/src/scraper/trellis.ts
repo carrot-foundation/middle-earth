@@ -178,6 +178,14 @@ export async function scrapeTrellis(
         break;
       }
     } catch (error: unknown) {
+      // A 402/429 from firecrawlSearch itself (not the scrape) propagates here;
+      // treat it as quota exhaustion too, so remaining themes + curation are
+      // skipped rather than hammering the exhausted API.
+      if (isQuotaError(error)) {
+        console.error('[Trellis] Firecrawl quota/rate limit during theme search — aborting remaining themes.');
+        quotaExhausted = true;
+        break;
+      }
       const message = error instanceof Error ? error.message : 'unknown';
       console.error(`[Trellis] Search failed for "${theme.name}": ${message}`);
     }

@@ -11,19 +11,37 @@ Pre-existing issues surfaced incidentally during review — not caused by the wo
 
 ## Unbounded scrape attempts per theme (cost ceiling)
 
-- **Surfaced by:** blind/edge review of `spec-firecrawl-trellis-scraper` (2026-05-19).
-- **Where:** `esg-news.ts` and `trellis.ts` — both iterate up to `SEARCH_LIMIT` (10) candidates calling the paid `firecrawlScrape` until `MAX_ARTICLES_PER_THEME` *successful* pushes. Worst case (all early candidates undated/stale/empty) ≈ 10 paid scrapes/theme.
-- **Why deferred:** the cap-on-success behavior is shared by both scrapers (intentional parity, itself a #31 review fix). Bounding attempts in Trellis only would break parity; it must be done consistently across esg + trellis as one focused change.
-- **Suggested fix:** add a per-theme attempt cap (e.g. `MAX_ARTICLES_PER_THEME + slack`) applied identically in both scrapers.
+- **Surfaced by:** blind/edge review of `spec-firecrawl-trellis-scraper`
+  (2026-05-19).
+- **Where:** `esg-news.ts` and `trellis.ts` — both iterate up to
+  `SEARCH_LIMIT` (10) candidates calling the paid `firecrawlScrape` until
+  `MAX_ARTICLES_PER_THEME` *successful* pushes. Worst case (all early
+  candidates undated/stale/empty) ≈ 10 paid scrapes/theme.
+- **Why deferred:** the cap-on-success behavior is shared by both scrapers
+  (intentional parity, itself a #31 review fix). Bounding attempts in Trellis
+  only would break parity; do it consistently across esg + trellis as one
+  focused change.
+- **Suggested fix:** add a per-theme attempt cap
+  (e.g. `MAX_ARTICLES_PER_THEME + slack`) applied identically in both scrapers.
 
 ## No aggregate failure circuit-breaker before curation
 
-- **Surfaced by:** blind/edge review of `spec-firecrawl-trellis-scraper` (2026-05-19).
-- **Where:** `trellis.ts` `scrapeTrellis` — if every per-theme search fails with non-quota errors (provider degraded), the code still proceeds to `collectCandidates` + the Anthropic curation call. (Quota 402/429 is already short-circuited; this is the non-quota all-fail case.) Pre-existing structural pattern from the Playwright version.
-- **Suggested fix:** track per-theme failure count; skip curation if all themes failed.
+- **Surfaced by:** blind/edge review of `spec-firecrawl-trellis-scraper`
+  (2026-05-19).
+- **Where:** `trellis.ts` `scrapeTrellis` — if every per-theme search fails
+  with non-quota errors (provider degraded), the code still proceeds to
+  `collectCandidates` + the Anthropic curation call. (Quota 402/429 is already
+  short-circuited; this is the non-quota all-fail case.) Pre-existing
+  structural pattern from the Playwright version.
+- **Suggested fix:** track per-theme failure count; skip curation if all
+  themes failed.
 
 ## `parseDate` UTC-slice off-by-one at the freshness boundary
 
-- **Surfaced by:** blind/edge review (2026-05-19); shared with `esg-news.ts` (same `.toISOString().slice(0,10)` round-trip) — not a Trellis regression.
-- **Issue:** a timezone-shifted publish time can shift the date-only string by a day, flipping inclusion at exactly `MAX_ARTICLE_AGE_DAYS`.
-- **Suggested fix:** compare timestamps from the raw published time instead of round-tripping through a date-only string; add 29/30/31-day boundary tests. Apply to esg + trellis together.
+- **Surfaced by:** blind/edge review (2026-05-19); shared with `esg-news.ts`
+  (same `.toISOString().slice(0,10)` round-trip) — not a Trellis regression.
+- **Issue:** a timezone-shifted publish time can shift the date-only string by
+  a day, flipping inclusion at exactly `MAX_ARTICLE_AGE_DAYS`.
+- **Suggested fix:** compare timestamps from the raw published time instead of
+  round-tripping through a date-only string; add 29/30/31-day boundary tests.
+  Apply to esg + trellis together.

@@ -332,6 +332,38 @@ describe('scrapeTrellis', () => {
     expect(vi.mocked(curateTrellisArticles)).not.toHaveBeenCalled();
   });
 
+  it('skips curation when the theme SEARCH itself hits a quota error', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string, init: { body: string }) => {
+        const body = JSON.parse(init.body) as { query?: string };
+        if (url.endsWith('/v2/search')) {
+          // Theme search returns 402 directly (not the scrape).
+          if (!isCuration(body.query ?? '')) {
+            return { ok: false, status: 402, json: async () => ({}) };
+          }
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({ data: { web: [{ url: 'https://trellis.net/article/c/', title: 'C' }] } }),
+          };
+        }
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            data: { markdown: 'never reached', metadata: { 'article:published_time': daysAgoIso(1) } },
+          }),
+        };
+      }),
+    );
+
+    const result = await scrapeTrellis([stubTheme()], new Set(), ANTHROPIC, KEY);
+
+    expect(result).toHaveLength(0);
+    expect(vi.mocked(curateTrellisArticles)).not.toHaveBeenCalled();
+  });
+
   it('rejects off-domain and non-article URLs from search results', async () => {
     vi.mocked(curateTrellisArticles).mockResolvedValue([]);
     installFetch({
