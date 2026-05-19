@@ -112,11 +112,16 @@ export async function scrapeEsgNews(
   }
 
   const allArticles: RawArticle[] = [];
+  // Carry URLs scraped under earlier themes forward, so an article matching
+  // multiple themes isn't re-discovered, re-scraped (wasting a credit) and
+  // returned twice.
+  const seenUrls = new Set(processedUrls);
   for (const theme of themes) {
     console.log(`[ESG News] Searching: ${theme.name}`);
     try {
-      const articles = await searchAndExtract(theme, processedUrls, cpTitles, firecrawlApiKey);
+      const articles = await searchAndExtract(theme, seenUrls, cpTitles, firecrawlApiKey);
       allArticles.push(...articles);
+      for (const article of articles) seenUrls.add(article.url);
       console.log(`[ESG News] Found ${articles.length} articles for ${theme.name}`);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'unknown';

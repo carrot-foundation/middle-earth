@@ -160,12 +160,17 @@ export async function scrapeTrellis(
   }
 
   const perTheme: RawArticle[] = [];
+  // Carry URLs scraped under earlier themes forward, so an article matching
+  // multiple themes isn't re-discovered, re-scraped (wasting a credit) and
+  // returned twice.
+  const seenUrls = new Set(processedUrls);
   let quotaExhausted = false;
   for (const theme of themes) {
     console.log(`[Trellis] Searching: ${theme.name}`);
     try {
-      const result = await searchTheme(theme, processedUrls, firecrawlApiKey);
+      const result = await searchTheme(theme, seenUrls, firecrawlApiKey);
       perTheme.push(...result.articles);
+      for (const article of result.articles) seenUrls.add(article.url);
       console.log(`[Trellis] Found ${result.articles.length} article(s) for ${theme.name}`);
       if (result.quotaExhausted) {
         quotaExhausted = true;

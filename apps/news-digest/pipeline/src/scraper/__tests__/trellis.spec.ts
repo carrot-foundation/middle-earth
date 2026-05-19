@@ -413,6 +413,55 @@ describe('scrapeTrellis', () => {
     expect(result[0]!.url).toBe('https://trellis.net/article/dup/');
   });
 
+  it('does not re-scrape an article that already matched an earlier theme', async () => {
+    vi.mocked(curateTrellisArticles).mockResolvedValue([]);
+    let scrapeCalls = 0;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string, init: { body: string }) => {
+        const body = JSON.parse(init.body) as { query?: string };
+        if (url.endsWith('/v2/search')) {
+          if (isCuration(body.query ?? '')) {
+            return { ok: true, status: 200, json: async () => ({ data: { web: [] } }) };
+          }
+          // Every theme search surfaces the SAME article.
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({
+              data: { web: [{ url: 'https://trellis.net/article/shared/', title: 'Shared' }] },
+            }),
+          };
+        }
+        scrapeCalls += 1;
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            data: {
+              markdown: 'A Trellis article matching multiple themes about carbon policy.',
+              metadata: { 'article:published_time': daysAgoIso(1), author: 'Trellis' },
+            },
+          }),
+        };
+      }),
+    );
+
+    const result = await scrapeTrellis(
+      [
+        stubTheme({ name: 'Theme A', trellisSearchTerms: 'aaa' }),
+        stubTheme({ name: 'Theme B', trellisSearchTerms: 'bbb' }),
+      ],
+      new Set(),
+      ANTHROPIC,
+      KEY,
+    );
+
+    expect(scrapeCalls).toBe(1);
+    expect(result).toHaveLength(1);
+    expect(result[0]!.url).toBe('https://trellis.net/article/shared/');
+  });
+
   it('throws when the Firecrawl API key is not configured', async () => {
     await expect(scrapeTrellis([stubTheme()], new Set(), ANTHROPIC, '')).rejects.toThrow(
       /FIRECRAWL_API_KEY not configured/,
