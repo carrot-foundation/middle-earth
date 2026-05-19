@@ -1,17 +1,11 @@
 import { sanitizeArticleText } from '../helpers/content.helpers.js';
+import { parseDate } from '../helpers/date.helpers.js';
 import { FirecrawlError, firecrawlScrape, firecrawlSearch } from '../helpers/firecrawl.helpers.js';
 import type { RawArticle, ThemeConfig } from '../types.js';
 
 const MAX_ARTICLES_PER_THEME = 2;
 const MAX_ARTICLE_AGE_DAYS = 30;
 const SEARCH_LIMIT = 10;
-
-function parseDate(raw: string): string {
-  if (!raw) return '';
-  const parsed = new Date(raw);
-  if (Number.isNaN(parsed.getTime())) return '';
-  return parsed.toISOString().slice(0, 10);
-}
 
 function isDuplicateOfCarbonPulse(title: string, cpTitles: readonly string[]): boolean {
   const lowerTitle = title.toLowerCase();
@@ -118,11 +112,16 @@ export async function scrapeEsgNews(
   }
 
   const allArticles: RawArticle[] = [];
+  // Carry URLs scraped under earlier themes forward, so an article matching
+  // multiple themes isn't re-discovered, re-scraped (wasting a credit) and
+  // returned twice.
+  const seenUrls = new Set(processedUrls);
   for (const theme of themes) {
     console.log(`[ESG News] Searching: ${theme.name}`);
     try {
-      const articles = await searchAndExtract(theme, processedUrls, cpTitles, firecrawlApiKey);
+      const articles = await searchAndExtract(theme, seenUrls, cpTitles, firecrawlApiKey);
       allArticles.push(...articles);
+      for (const article of articles) seenUrls.add(article.url);
       console.log(`[ESG News] Found ${articles.length} articles for ${theme.name}`);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'unknown';

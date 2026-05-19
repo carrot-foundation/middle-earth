@@ -26,6 +26,7 @@ export class FirecrawlError extends Error {
 export interface FirecrawlSearchResult {
   readonly url: string;
   readonly title: string;
+  readonly description: string;
 }
 
 export interface FirecrawlScrapeResult {
@@ -102,6 +103,8 @@ export async function firecrawlSearch(
       return {
         url: typeof record['url'] === 'string' ? record['url'] : '',
         title: typeof record['title'] === 'string' ? record['title'].trim() : '',
+        description:
+          typeof record['description'] === 'string' ? record['description'].trim() : '',
       };
     })
     .filter((result) => result.url.length > 0 && result.title.length > 0);

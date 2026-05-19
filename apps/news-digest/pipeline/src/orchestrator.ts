@@ -254,7 +254,7 @@ export async function runPipeline(config: PipelineConfig): Promise<PipelineResul
 
     console.log('Step 5: Scraping Trellis...');
     try {
-      trellisArticles = await scrapeTrellis(eligibleThemes, processedUrls, config.secrets.anthropicApiKey);
+      trellisArticles = await scrapeTrellis(eligibleThemes, processedUrls, config.secrets.anthropicApiKey, config.secrets.firecrawlApiKey);
       console.log(`Trellis: ${trellisArticles.length} articles`);
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : 'unknown';

@@ -19,13 +19,13 @@ function mockFetch(response: { ok: boolean; status?: number; body?: unknown }): 
 describe('firecrawlSearch', () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  it('maps data.web entries to {url,title} and drops incomplete ones', async () => {
+  it('maps data.web entries to {url,title,description} and drops incomplete ones', async () => {
     mockFetch({
       ok: true,
       body: {
         data: {
           web: [
-            { url: 'https://esgnews.com/a/', title: ' Article A ' },
+            { url: 'https://esgnews.com/a/', title: ' Article A ', description: ' Lead text ' },
             { url: 'https://esgnews.com/b/' }, // missing title -> dropped
             { title: 'No URL' }, // missing url -> dropped
           ],
@@ -35,7 +35,9 @@ describe('firecrawlSearch', () => {
 
     const results = await firecrawlSearch('methane', 'fc-key');
 
-    expect(results).toEqual([{ url: 'https://esgnews.com/a/', title: 'Article A' }]);
+    expect(results).toEqual([
+      { url: 'https://esgnews.com/a/', title: 'Article A', description: 'Lead text' },
+    ]);
   });
 
   it('POSTs to the v2 search endpoint with bearer auth and a JSON body', async () => {

@@ -358,6 +358,50 @@ describe('scrapeEsgNews', () => {
     expect(result[0]!.url).toBe('https://esgnews.com/collected/');
   });
 
+  it('does not re-scrape an article that already matched an earlier theme', async () => {
+    let scrapeCalls = 0;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string, init: { body: string }) => {
+        if (url.endsWith('/v2/search')) {
+          // Every theme search surfaces the SAME article.
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({
+              data: { web: [{ url: 'https://esgnews.com/shared/', title: 'Shared' }] },
+            }),
+          };
+        }
+        scrapeCalls += 1;
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            data: {
+              markdown: 'An ESG article matching multiple themes about methane policy.',
+              metadata: { 'article:published_time': daysAgoIso(1), author: 'ESG News' },
+            },
+          }),
+        };
+      }),
+    );
+
+    const result = await scrapeEsgNews(
+      [
+        stubTheme({ name: 'Theme A', esgNewsSearchTerms: 'aaa' }),
+        stubTheme({ name: 'Theme B', esgNewsSearchTerms: 'bbb' }),
+      ],
+      new Set(),
+      [],
+      KEY,
+    );
+
+    expect(scrapeCalls).toBe(1);
+    expect(result).toHaveLength(1);
+    expect(result[0]!.url).toBe('https://esgnews.com/shared/');
+  });
+
   it('throws when the Firecrawl API key is not configured', async () => {
     await expect(scrapeEsgNews([stubTheme()], new Set(), [], '')).rejects.toThrow(
       /FIRECRAWL_API_KEY not configured/,
