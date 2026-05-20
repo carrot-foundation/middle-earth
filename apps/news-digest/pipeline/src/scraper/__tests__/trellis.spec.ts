@@ -315,6 +315,46 @@ describe('scrapeTrellis', () => {
     expect(result.map((article) => article.url)).toEqual(['https://trellis.net/article/good/']);
   });
 
+  it('stops scraping per-theme candidates after the hard cap (5) to bound credit spend', async () => {
+    vi.mocked(curateTrellisArticles).mockResolvedValue([]);
+    const theme = stubTheme();
+    const links = Array.from({ length: 8 }, (_unused, index) => ({
+      url: `https://trellis.net/article/c${index}/`,
+      title: `Candidate ${index}`,
+    }));
+    const fetchSpy = vi.fn(async (_url: string, init: { body: string }) => {
+      const body = JSON.parse(init.body) as { url: string };
+      if (body.url === themeListingUrl(theme)) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ data: { markdown: listingMarkdown(links), metadata: {} } }),
+        };
+      }
+      if (body.url === CURATION_LISTING_URL) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ data: { markdown: '', metadata: {} } }),
+        };
+      }
+      // Every candidate skips on missing publish_time (1 credit each).
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          data: { markdown: '', metadata: { 'article:published_time': '' } },
+        }),
+      };
+    });
+    vi.stubGlobal('fetch', fetchSpy);
+
+    await scrapeTrellis([theme], new Set(), ANTHROPIC, KEY);
+
+    // 1 per-theme listing + 5 candidate scrapes + 1 curation listing scrape = 7
+    expect(fetchSpy).toHaveBeenCalledTimes(7);
+  });
+
   it('returns only per-theme articles when the curator itself throws (Anthropic outage)', async () => {
     vi.mocked(curateTrellisArticles).mockRejectedValue(new Error('anthropic 401'));
     const theme = stubTheme();

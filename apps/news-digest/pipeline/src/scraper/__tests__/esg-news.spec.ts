@@ -524,6 +524,41 @@ describe('scrapeEsgNews', () => {
     ]);
   });
 
+  it('stops scraping per-theme candidates after the hard cap (5) to bound credit spend', async () => {
+    const theme = stubTheme();
+    const links = Array.from({ length: 8 }, (_unused, index) => ({
+      url: `https://esgnews.com/c${index}/`,
+      title: `Candidate ${index}`,
+    }));
+    const articleScrapes: Record<string, { markdown: string; publishedTime: string }> = {};
+    for (const link of links) {
+      articleScrapes[link.url] = { markdown: '', publishedTime: '' };
+    }
+    const fetchSpy = vi.fn(async (_url: string, init: { body: string }) => {
+      const body = JSON.parse(init.body) as { url: string };
+      if (body.url === listingUrl(theme)) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ data: { markdown: listingMarkdown(links), metadata: {} } }),
+        };
+      }
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          data: { markdown: '', metadata: { 'article:published_time': '' } },
+        }),
+      };
+    });
+    vi.stubGlobal('fetch', fetchSpy);
+
+    await scrapeEsgNews([theme], new Set(), [], KEY);
+
+    // 1 listing scrape + at most 5 candidate scrapes
+    expect(fetchSpy).toHaveBeenCalledTimes(6);
+  });
+
   it('preserves articles already collected when a later scrape hits a quota error', async () => {
     const theme = stubTheme();
     installFetch({

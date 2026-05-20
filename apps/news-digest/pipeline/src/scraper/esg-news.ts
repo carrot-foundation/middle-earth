@@ -8,6 +8,12 @@ import {
 import type { RawArticle, ThemeConfig } from '../types.js';
 
 const MAX_ARTICLES_PER_THEME = 2;
+// Hard cap on per-theme candidate scrapes — without it, a listing with N
+// links iterates until 2 succeed or the list is exhausted, and most
+// candidates fail the publish-date / freshness / sanitization barrier
+// (1 credit each). The listing is date-desc, so anything past #5 is
+// already drifting toward the 30-day freshness cliff anyway.
+const MAX_CANDIDATES_PER_THEME = 5;
 const MAX_ARTICLE_AGE_DAYS = 30;
 const LISTING_URL_BASE = 'https://esgnews.com/?s=';
 
@@ -99,10 +105,12 @@ async function discoverAndScrape(
     return true;
   });
 
-  // Cap on *successful* extractions, not raw candidates: early candidates can
-  // be stale/empty/dup, so slicing up front would yield fewer than possible.
+  // Cap on *successful* extractions (MAX_ARTICLES_PER_THEME) plus a hard
+  // ceiling on attempts (MAX_CANDIDATES_PER_THEME) so a low-yield listing
+  // can't burn the whole link list one credit at a time. The listing is
+  // date-desc so the freshest candidates are scanned first.
   const articles: RawArticle[] = [];
-  for (const candidate of candidates) {
+  for (const candidate of candidates.slice(0, MAX_CANDIDATES_PER_THEME)) {
     if (articles.length >= MAX_ARTICLES_PER_THEME) break;
     try {
       const scraped = await firecrawlScrape(candidate.url, apiKey);
