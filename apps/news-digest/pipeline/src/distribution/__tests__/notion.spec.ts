@@ -24,11 +24,26 @@ describe('createNotionPage', () => {
     expect(result).toEqual({ success: true, pageId: 'page-123' });
   });
 
-  it('omits Main Theme when theme is not in valid options', async () => {
+  it('falls back to Industry Intelligence when the theme is not in NOTION_VALID_THEMES', async () => {
+    // Regression: 2026-05-20 pages shipped with empty Main Theme because the
+    // Trellis curator chose "Verification & Auditing" — a valid THEMES name
+    // but not in NOTION_VALID_THEMES. The catch-all "Industry Intelligence"
+    // is in NOTION_VALID_THEMES specifically as the fallback target.
     mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ id: 'page-456' }) });
     await createNotionPage(stubProcessedArticle({ mainTheme: 'Verification & Auditing' }), 'db-id', 'token');
     const body = JSON.parse(mockFetch.mock.calls[0][1].body as string);
-    expect(body.properties['Main Theme']).toBeUndefined();
+    expect(body.properties['Main Theme']).toEqual({
+      multi_select: [{ name: 'Industry Intelligence' }],
+    });
+  });
+
+  it('keeps a valid mainTheme on the page (no fallback applied)', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ id: 'page-457' }) });
+    await createNotionPage(stubProcessedArticle({ mainTheme: 'Carbon Markets' }), 'db-id', 'token');
+    const body = JSON.parse(mockFetch.mock.calls[0][1].body as string);
+    expect(body.properties['Main Theme']).toEqual({
+      multi_select: [{ name: 'Carbon Markets' }],
+    });
   });
 
   it('stores the source article URL in the "Source URL" property', async () => {

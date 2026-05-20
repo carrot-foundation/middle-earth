@@ -205,6 +205,34 @@ describe('extractMarkdownLinks', () => {
       { url: 'https://a/article-slug/', title: 'Real article' },
     ]);
   });
+
+  it('strips matched markdown emphasis wrapping the title (regression: 2026-05-20 Notion page had literal ** chars)', () => {
+    // Trellis listings render titles as `[**Title**](url)`. Before this fix,
+    // the literal `**` ended up in the Notion page title field.
+    expect(
+      extractMarkdownLinks('[**Bold Title**](https://a/article-1/)', acceptAll),
+    ).toEqual([{ url: 'https://a/article-1/', title: 'Bold Title' }]);
+    expect(
+      extractMarkdownLinks('[*italic title*](https://a/article-2/)', acceptAll),
+    ).toEqual([{ url: 'https://a/article-2/', title: 'italic title' }]);
+    expect(
+      extractMarkdownLinks('[***Bold Italic***](https://a/article-3/)', acceptAll),
+    ).toEqual([{ url: 'https://a/article-3/', title: 'Bold Italic' }]);
+    expect(
+      extractMarkdownLinks('[__Underscore Bold__](https://a/article-4/)', acceptAll),
+    ).toEqual([{ url: 'https://a/article-4/', title: 'Underscore Bold' }]);
+  });
+
+  it('leaves asymmetric/unmatched emphasis markers alone (no over-stripping)', () => {
+    // Don't try to be clever — if the markers don't match, the title was
+    // probably intentional formatting we'd rather preserve than mangle.
+    expect(
+      extractMarkdownLinks('[**Half bold](https://a/x/)', acceptAll),
+    ).toEqual([{ url: 'https://a/x/', title: '**Half bold' }]);
+    expect(
+      extractMarkdownLinks('[Mid **bold** word](https://a/y/)', acceptAll),
+    ).toEqual([{ url: 'https://a/y/', title: 'Mid **bold** word' }]);
+  });
 });
 
 describe('FirecrawlError', () => {

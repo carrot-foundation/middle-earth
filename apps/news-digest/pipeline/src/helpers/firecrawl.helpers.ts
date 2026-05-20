@@ -127,6 +127,20 @@ export async function firecrawlScrape(
 // (would burn a Firecrawl scrape on a JPG URL).
 const MARKDOWN_LINK_PATTERN = /(?<!!)\[([^\]]*)\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g;
 
+// Recursively peel matched-emphasis wrappers (`**bold**`, `*italic*`, `__b__`,
+// `_i_`, and `***bold-italic***`) off a link title. Trellis listings render
+// titles as `[**Title Goes Here**](url)`; without this, the `**` ended up
+// literally in the Notion page title (regression: 2026-05-20 prod page).
+// Unmatched/asymmetric markers are left alone — safer than over-stripping.
+function stripMarkdownEmphasis(title: string): string {
+  let current = title.trim();
+  for (;;) {
+    const match = /^(\*\*\*|\*\*|__|\*|_)(.+)\1$/.exec(current);
+    if (!match) return current;
+    current = match[2].trim();
+  }
+}
+
 /**
  * Pull `{url, title}` from each markdown inline link, in source order, keeping
  * only those the `predicate` accepts. Titles are trimmed; empty titles and
@@ -145,7 +159,8 @@ export function extractMarkdownLinks(
   const seen = new Set<string>();
   const out: MarkdownLink[] = [];
   for (const match of markdown.matchAll(MARKDOWN_LINK_PATTERN)) {
-    const title = (match[1] ?? '').trim();
+    const rawTitle = (match[1] ?? '').trim();
+    const title = stripMarkdownEmphasis(rawTitle);
     const url = (match[2] ?? '').trim();
     if (!title || !url || seen.has(url)) continue;
     if (!predicate({ url, title })) continue;
