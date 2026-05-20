@@ -10,6 +10,12 @@ import {
 import type { RawArticle, ThemeConfig } from '../types.js';
 
 const MAX_ARTICLES_PER_THEME = 1;
+// Hard cap on per-theme candidate scrapes — parity with esg-news.ts.
+// Without it, a listing with N links iterates until 1 succeeds or the list
+// is exhausted, burning 1 credit per failed publish-date / freshness /
+// sanitization skip. Listing is date-desc; past #5 candidates drift toward
+// the freshness cliff anyway.
+const MAX_CANDIDATES_PER_THEME = 5;
 const MAX_ARTICLE_AGE_DAYS = 30;
 const CANDIDATE_POOL_SIZE = 15;
 const PER_THEME_LISTING_URL_BASE = 'https://trellis.net/?s=';
@@ -116,9 +122,11 @@ async function discoverThemeAndScrape(
     return true;
   });
 
-  // Cap on *successful* extractions, not raw candidates.
+  // Cap on *successful* extractions plus a hard ceiling on attempts
+  // (MAX_CANDIDATES_PER_THEME) so a low-yield listing can't drain credits
+  // through the entire link list. Listing is date-desc; freshest first.
   const articles: RawArticle[] = [];
-  for (const candidate of candidates) {
+  for (const candidate of candidates.slice(0, MAX_CANDIDATES_PER_THEME)) {
     if (articles.length >= MAX_ARTICLES_PER_THEME) break;
     try {
       const article = await scrapeArticle(candidate.url, candidate.title, theme.name, apiKey);

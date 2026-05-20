@@ -116,4 +116,94 @@ describe('sanitizeArticleText', () => {
     expect(sanitizeArticleText('')).toBe('');
     expect(sanitizeArticleText('   \n\t  \n ')).toBe('');
   });
+
+  // Regression: 2026-05-20 prod Notion page (Trellis EDF article) shipped with
+  // ~80% page chrome — newsletter signup, share buttons, repeated H1, author
+  // bio, and a giant "Featured Reports" sponsored-cards block. These cases
+  // lock in the post-fix behavior so a future template change is loud.
+  it('strips Trellis newsletter signup + share strip + utm form-field artifacts', () => {
+    const raw =
+      '[Skip to content](https://trellis.net/article/x/#content)\n\n' +
+      '**Subscribe to Trellis Briefing**\n\n' +
+      'Please enable JavaScript in your browser to complete this form.\n\n' +
+      'Email address \\*\n\n' +
+      'utmCampaignLast\n\nutmMediumLast\n\nutmSourceLast\n\n' +
+      'Subscribe![Loading](https://trellis.net/wp-content/themes/greenbiz/static/loader.svg)\n\n' +
+      '[LinkedIn](https://linkedin.com/share?url=https://trellis.net/article/x/)[X](https://x.com/share?url=https://trellis.net/article/x/)[Facebook](https://facebook.com/sharer?u=https://trellis.net/article/x/)\n\n' +
+      'The actual article begins here with substantive content about climate frameworks.';
+    const cleaned = sanitizeArticleText(raw);
+    expect(cleaned).not.toContain('Skip to content');
+    expect(cleaned).not.toContain('Subscribe to Trellis Briefing');
+    expect(cleaned).not.toContain('Please enable JavaScript');
+    expect(cleaned).not.toContain('Email address');
+    expect(cleaned).not.toContain('utmCampaignLast');
+    expect(cleaned).not.toContain('utmMediumLast');
+    expect(cleaned).not.toContain('utmSourceLast');
+    expect(cleaned).not.toContain('Loading');
+    // cspell:disable-next-line
+    expect(cleaned).not.toContain('linkedin.com/share');
+    expect(cleaned).toContain('The actual article begins here with substantive content about climate frameworks.');
+  });
+
+  it('drops standalone image markdown lines (Firecrawl emits them for hero/byline images)', () => {
+    const raw =
+      '![Hero image alt text describing the figure](https://trellis.net/uploads/hero.jpg?w=1024)\n' +
+      'The article paragraph that follows the hero image.\n' +
+      '![](https://trellis.net/uploads/chart.png)\n' +
+      'Second paragraph after a chart with empty alt text.';
+    const cleaned = sanitizeArticleText(raw);
+    expect(cleaned).not.toContain('![');
+    expect(cleaned).not.toContain('hero.jpg');
+    expect(cleaned).not.toContain('chart.png');
+    expect(cleaned).toContain('The article paragraph that follows the hero image.');
+    expect(cleaned).toContain('Second paragraph after a chart with empty alt text.');
+  });
+
+  it('truncates everything from the "Featured Reports" heading onwards (Trellis sponsored block)', () => {
+    const raw =
+      'The article body ends here with a meaningful conclusion.\n' +
+      '### Featured Reports\n' +
+      '[![Sponsored card 1](https://trellis.net/img1.png)](https://trellis.net/resource/a/)\n' +
+      'Sponsored\n' +
+      '[![Sponsored card 2](https://trellis.net/img2.png)](https://trellis.net/resource/b/)\n' +
+      'reCAPTCHA\n' +
+      'protected by reCAPTCHA';
+    const cleaned = sanitizeArticleText(raw);
+    expect(cleaned).not.toContain('Featured Reports');
+    expect(cleaned).not.toContain('Sponsored card');
+    expect(cleaned).not.toContain('reCAPTCHA');
+    expect(cleaned).toContain('The article body ends here with a meaningful conclusion.');
+  });
+
+  it('truncates at the second "Subscribe to Trellis Briefing" heading (post-article repost)', () => {
+    const raw =
+      'Final paragraph of the article with substantive content here.\n' +
+      '## Subscribe to Trellis Briefing\n' +
+      'Get real case studies, expert action steps and the latest sustainability trends.\n' +
+      'Please enable JavaScript in your browser to complete this form.';
+    const cleaned = sanitizeArticleText(raw);
+    expect(cleaned).toContain('Final paragraph of the article with substantive content here.');
+    expect(cleaned).not.toContain('Subscribe to Trellis Briefing');
+    expect(cleaned).not.toContain('Get real case studies');
+  });
+
+  it('strips share-button-strip lines (pure inline-link sequences) but preserves inline links inside article paragraphs', () => {
+    const raw =
+      '[LinkedIn](https://www.linkedin.com/share?url=x)[X](https://x.com/share?url=x)[Facebook](https://facebook.com/sharer?u=x)\n' +
+      'See the [Climate Contribution Framework white paper](https://example.com/paper.pdf) for details on methodology.';
+    const cleaned = sanitizeArticleText(raw);
+    expect(cleaned).not.toMatch(/^\[LinkedIn\]/m);
+    expect(cleaned).not.toContain('facebook.com/sharer');
+    expect(cleaned).toContain('See the [Climate Contribution Framework white paper](https://example.com/paper.pdf) for details on methodology.');
+  });
+
+  it('strips collapsed-card backslash artifacts and standalone "By" byline label', () => {
+    const raw =
+      'By\n[Jim Giles](https://trellis.net/article/author/jim-giles/)\n\\\\\n\nSponsored\\\\\n\nThe article body paragraph.';
+    const cleaned = sanitizeArticleText(raw);
+    expect(cleaned).not.toMatch(/^By$/m);
+    expect(cleaned).not.toMatch(/^Sponsored/m);
+    expect(cleaned).not.toMatch(/^\\+$/m);
+    expect(cleaned).toContain('The article body paragraph.');
+  });
 });

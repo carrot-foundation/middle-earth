@@ -10,6 +10,12 @@ interface NotionResult {
 }
 
 const NOTION_TEXT_LIMIT = 2000;
+// Fallback Main Theme for articles whose curator/AI-assigned theme exists in
+// `THEMES` but isn't in `NOTION_VALID_THEMES` (5 names are out of sync —
+// Carrot Mentions, Composting Infrastructure, Circularity Technology,
+// Verification & Auditing, Circularity Investors). Pre-fix those pages
+// silently shipped with an empty Main Theme (regression: 2026-05-20).
+const MAIN_THEME_FALLBACK = 'Industry Intelligence';
 
 function isValidTheme(theme: string): boolean {
   return (NOTION_VALID_THEMES as readonly string[]).includes(theme);
@@ -39,11 +45,11 @@ function buildPageProperties(article: ProcessedArticle): Record<string, unknown>
     properties['Segment'] = { select: { name: article.segment } };
   }
 
-  if (isValidTheme(article.mainTheme)) {
-    properties['Main Theme'] = {
-      multi_select: [{ name: article.mainTheme }],
-    };
-  }
+  properties['Main Theme'] = {
+    multi_select: [
+      { name: isValidTheme(article.mainTheme) ? article.mainTheme : MAIN_THEME_FALLBACK },
+    ],
+  };
 
   return properties;
 }

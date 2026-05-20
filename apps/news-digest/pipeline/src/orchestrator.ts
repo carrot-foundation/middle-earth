@@ -2,7 +2,6 @@ import { S3Store } from './state/s3-store.js';
 import { applyThemesFilter, getEligibleThemes } from './helpers/theme.helpers.js';
 import { deduplicateArticles } from './helpers/dedup.helpers.js';
 import { buildArticleMarkdown, slugify } from './helpers/markdown.helpers.js';
-import { scrapeCarbonPulse } from './scraper/carbon-pulse.js';
 import { scrapeEsgNews } from './scraper/esg-news.js';
 import { scrapeTrellis } from './scraper/trellis.js';
 import { scrapeSubstack } from './scraper/substack.js';
@@ -236,24 +235,23 @@ export async function runPipeline(config: PipelineConfig): Promise<PipelineResul
   }
 
   // Steps 3-5: Theme-driven sources (gated)
-  let cpArticles: RawArticle[] = [];
+  //
+  // Carbon Pulse is intentionally disabled — the subscription account hit a
+  // URM login failure (see CloudWatch run 2026-05-20: `ur_login_error_*`) and
+  // we don't have working auth right now. The scraper code, secret schema,
+  // and Playwright dep remain in tree so this is a one-line revert when the
+  // seat-cap / credential situation is resolved (cf. memory
+  // `news-digest-carbonpulse-login-seatcap`). `cpArticles` stays as a fixed
+  // empty list so downstream allRaw / articlesBySource / cpTitles dedup
+  // contract is unchanged.
+  const cpArticles: readonly RawArticle[] = [];
   let esgArticles: RawArticle[] = [];
   let trellisArticles: RawArticle[] = [];
 
   if (eligibleThemes.length > 0) {
-    console.log('Step 3: Scraping Carbon Pulse...');
-    try {
-      cpArticles = await scrapeCarbonPulse(eligibleThemes, processedUrls, config.secrets.carbonPulse, config.secrets.proxy);
-      console.log(`Carbon Pulse: ${cpArticles.length} articles`);
-    } catch (error: unknown) {
-      const msg = error instanceof Error ? error.message : 'unknown';
-      errors.push(`Carbon Pulse scraping failed: ${msg}`);
-      console.error(errors[errors.length - 1]);
-    }
-
     console.log('Step 4: Scraping ESG News...');
     try {
-      const cpTitles = cpArticles.map((a) => a.title);
+      const cpTitles = cpArticles.map((article) => article.title);
       esgArticles = await scrapeEsgNews(eligibleThemes, processedUrls, cpTitles, config.secrets.firecrawlApiKey);
       console.log(`ESG News: ${esgArticles.length} articles`);
     } catch (error: unknown) {
