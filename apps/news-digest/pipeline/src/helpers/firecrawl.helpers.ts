@@ -1,15 +1,17 @@
-// Thin Firecrawl v2 HTTP client (scrape) used by the scrapers.
+// Thin Firecrawl v2 HTTP client (scrape) used by the Trellis scraper.
 //
 // Firecrawl replaces hand-written CSS-selector scraping: `scrape` returns
 // markdown regardless of DOM, and we discover article candidates by
-// scraping each publisher's own date-ordered listing/search page and
+// scraping Trellis's own `/articles/` index + `?s=` search pages and
 // extracting links from that markdown.
 //
 // Why not `/v2/search`? It was tried (PRs #31/#32) and failed: the upstream
-// web index does not carry reliable publish dates for `esgnews.com` /
-// `trellis.net`, so its `tbs=qdr:*` recency filter is binary-fatal (PR #34
-// → reverted in #35). Hitting each publisher's own search/listing page
-// gives the same recency the old Playwright scrapers had for free.
+// web index does not carry reliable publish dates for `trellis.net`, so its
+// `tbs=qdr:*` recency filter is binary-fatal (PR #34 → reverted in #35).
+//
+// ESG News no longer uses this client at all: `esgnews.com/?s=` turned out to
+// ignore the query term and `orderby` entirely (validated 2026-05-21), so the
+// ESG scraper switched to the publisher RSS feed — see `scraper/esg-news.ts`.
 //
 // Mirrors the raw-`fetch` pattern in `ai/article-processor.ts` (no SDK).
 // Validated against the v2 API in the 2026-05-18 Step 0 spike and the

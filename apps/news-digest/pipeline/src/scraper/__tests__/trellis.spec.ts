@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import type { ThemeConfig } from '../../types.js';
 
-vi.mock('../../ai/trellis-curator.js', () => ({
-  curateTrellisArticles: vi.fn(),
+vi.mock('../../ai/article-curator.js', () => ({
+  curateArticles: vi.fn(),
 }));
 
-import { curateTrellisArticles } from '../../ai/trellis-curator.js';
+import { curateArticles } from '../../ai/article-curator.js';
 import { THEMES } from '../../config.constants.js';
 import { scrapeTrellis } from '../trellis.js';
 
@@ -81,7 +81,7 @@ describe('scrapeTrellis', () => {
   });
 
   it('extracts a sanitized RawArticle per theme and strips chrome', async () => {
-    vi.mocked(curateTrellisArticles).mockResolvedValue([]);
+    vi.mocked(curateArticles).mockResolvedValue([]);
     const theme = stubTheme();
     installFetch({
       [themeListingUrl(theme)]: {
@@ -109,7 +109,7 @@ describe('scrapeTrellis', () => {
 
   it('hits the publisher search URL for per-theme discovery', async () => {
     const theme = stubTheme({ trellisSearchTerms: 'methane policy' });
-    vi.mocked(curateTrellisArticles).mockResolvedValue([]);
+    vi.mocked(curateArticles).mockResolvedValue([]);
     const seen = new Set<string>();
     vi.stubGlobal(
       'fetch',
@@ -131,7 +131,7 @@ describe('scrapeTrellis', () => {
   });
 
   it('skips URLs already in processedUrls (no scrape)', async () => {
-    vi.mocked(curateTrellisArticles).mockResolvedValue([]);
+    vi.mocked(curateArticles).mockResolvedValue([]);
     const theme = stubTheme();
     installFetch({
       [themeListingUrl(theme)]: {
@@ -149,7 +149,7 @@ describe('scrapeTrellis', () => {
   });
 
   it('skips undated and too-old articles', async () => {
-    vi.mocked(curateTrellisArticles).mockResolvedValue([]);
+    vi.mocked(curateArticles).mockResolvedValue([]);
     const theme = stubTheme();
     installFetch({
       [themeListingUrl(theme)]: {
@@ -170,7 +170,7 @@ describe('scrapeTrellis', () => {
   });
 
   it('skips a page that sanitizes to empty (chrome-only)', async () => {
-    vi.mocked(curateTrellisArticles).mockResolvedValue([]);
+    vi.mocked(curateArticles).mockResolvedValue([]);
     const theme = stubTheme();
     installFetch({
       [themeListingUrl(theme)]: {
@@ -187,7 +187,7 @@ describe('scrapeTrellis', () => {
   });
 
   it('continues other themes when one theme discovery fails', async () => {
-    vi.mocked(curateTrellisArticles).mockResolvedValue([]);
+    vi.mocked(curateArticles).mockResolvedValue([]);
     const badTheme = stubTheme({ name: 'Bad', trellisSearchTerms: 'boom' });
     const goodTheme = stubTheme({ name: 'Good' });
     installFetch({
@@ -224,7 +224,7 @@ describe('scrapeTrellis', () => {
         publishedTime: daysAgoIso(1),
       },
     });
-    vi.mocked(curateTrellisArticles).mockResolvedValue([
+    vi.mocked(curateArticles).mockResolvedValue([
       { url: 'https://trellis.net/article/c1/', mainTheme: 'Methane & Super Pollutants' },
     ]);
 
@@ -234,7 +234,7 @@ describe('scrapeTrellis', () => {
     expect(result[0]!.url).toBe('https://trellis.net/article/c1/');
     expect(result[0]!.mainTheme).toBe('Methane & Super Pollutants');
 
-    const [candidates, themeNames] = vi.mocked(curateTrellisArticles).mock.calls[0]!;
+    const [candidates, themeNames] = vi.mocked(curateArticles).mock.calls[0]!;
     expect(candidates[0]).toMatchObject({
       url: 'https://trellis.net/article/c1/',
       title: 'Cand 1',
@@ -262,11 +262,11 @@ describe('scrapeTrellis', () => {
     const result = await scrapeTrellis([theme], new Set(), ANTHROPIC, KEY);
 
     expect(result).toHaveLength(1);
-    expect(vi.mocked(curateTrellisArticles)).not.toHaveBeenCalled();
+    expect(vi.mocked(curateArticles)).not.toHaveBeenCalled();
   });
 
   it('returns only per-theme articles when the curation discovery fails (resilience)', async () => {
-    vi.mocked(curateTrellisArticles).mockResolvedValue([]);
+    vi.mocked(curateArticles).mockResolvedValue([]);
     const theme = stubTheme();
     installFetch({
       [themeListingUrl(theme)]: {
@@ -284,11 +284,11 @@ describe('scrapeTrellis', () => {
 
     expect(result).toHaveLength(1);
     expect(result[0]!.url).toBe('https://trellis.net/article/pt/');
-    expect(vi.mocked(curateTrellisArticles)).not.toHaveBeenCalled();
+    expect(vi.mocked(curateArticles)).not.toHaveBeenCalled();
   });
 
   it('fills the per-theme cap from later candidates when early ones are skipped (cap on successful extractions)', async () => {
-    vi.mocked(curateTrellisArticles).mockResolvedValue([]);
+    vi.mocked(curateArticles).mockResolvedValue([]);
     const theme = stubTheme();
     installFetch({
       [themeListingUrl(theme)]: {
@@ -316,7 +316,7 @@ describe('scrapeTrellis', () => {
   });
 
   it('stops scraping per-theme candidates after the hard cap (5) to bound credit spend', async () => {
-    vi.mocked(curateTrellisArticles).mockResolvedValue([]);
+    vi.mocked(curateArticles).mockResolvedValue([]);
     const theme = stubTheme();
     const links = Array.from({ length: 8 }, (_unused, index) => ({
       url: `https://trellis.net/article/c${index}/`,
@@ -356,7 +356,7 @@ describe('scrapeTrellis', () => {
   });
 
   it('returns only per-theme articles when the curator itself throws (Anthropic outage)', async () => {
-    vi.mocked(curateTrellisArticles).mockRejectedValue(new Error('anthropic 401'));
+    vi.mocked(curateArticles).mockRejectedValue(new Error('anthropic 401'));
     const theme = stubTheme();
     installFetch({
       [themeListingUrl(theme)]: {
@@ -395,7 +395,7 @@ describe('scrapeTrellis', () => {
       },
       'https://trellis.net/article/quota/': { status: 402 },
     });
-    vi.mocked(curateTrellisArticles).mockResolvedValue([
+    vi.mocked(curateArticles).mockResolvedValue([
       { url: 'https://trellis.net/article/good/', mainTheme: 'Carbon Markets' },
       { url: 'https://trellis.net/article/quota/', mainTheme: 'Carbon Markets' },
     ]);
@@ -429,7 +429,7 @@ describe('scrapeTrellis', () => {
       const result = await scrapeTrellis([theme], new Set(), ANTHROPIC, KEY);
 
       expect(result).toHaveLength(0);
-      expect(vi.mocked(curateTrellisArticles)).not.toHaveBeenCalled();
+      expect(vi.mocked(curateArticles)).not.toHaveBeenCalled();
     },
   );
 
@@ -449,11 +449,11 @@ describe('scrapeTrellis', () => {
     const result = await scrapeTrellis([theme], new Set(), ANTHROPIC, KEY);
 
     expect(result).toHaveLength(0);
-    expect(vi.mocked(curateTrellisArticles)).not.toHaveBeenCalled();
+    expect(vi.mocked(curateArticles)).not.toHaveBeenCalled();
   });
 
   it('rejects off-domain and non-article URLs from listings', async () => {
-    vi.mocked(curateTrellisArticles).mockResolvedValue([]);
+    vi.mocked(curateArticles).mockResolvedValue([]);
     const theme = stubTheme();
     installFetch({
       [themeListingUrl(theme)]: {
@@ -488,7 +488,7 @@ describe('scrapeTrellis', () => {
         publishedTime: daysAgoIso(1),
       },
     });
-    vi.mocked(curateTrellisArticles).mockResolvedValue([
+    vi.mocked(curateArticles).mockResolvedValue([
       { url: 'https://trellis.net/article/dup/', mainTheme: 'Carbon Markets' },
       { url: 'https://trellis.net/article/dup/', mainTheme: 'Carbon Markets' },
     ]);
@@ -500,7 +500,7 @@ describe('scrapeTrellis', () => {
   });
 
   it('does not re-scrape an article that already matched an earlier theme', async () => {
-    vi.mocked(curateTrellisArticles).mockResolvedValue([]);
+    vi.mocked(curateArticles).mockResolvedValue([]);
     const themeA = stubTheme({ name: 'Theme A', trellisSearchTerms: 'aaa' });
     const themeB = stubTheme({ name: 'Theme B', trellisSearchTerms: 'bbb' });
     let scrapeCalls = 0;

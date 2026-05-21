@@ -1,5 +1,5 @@
 import { THEMES } from '../config.constants.js';
-import { curateTrellisArticles, type TrellisCandidate } from '../ai/trellis-curator.js';
+import { curateArticles, type ArticleCandidate } from '../ai/article-curator.js';
 import { sanitizeArticleText } from '../helpers/content.helpers.js';
 import { parseDate } from '../helpers/date.helpers.js';
 import {
@@ -148,7 +148,7 @@ async function discoverThemeAndScrape(
 async function collectCandidates(
   excludeUrls: ReadonlySet<string>,
   apiKey: string,
-): Promise<TrellisCandidate[]> {
+): Promise<ArticleCandidate[]> {
   // Single broad-pool scrape per run; shared across all themes via the curator.
   const listing = await firecrawlScrape(CURATION_LISTING_URL, apiKey);
   // Over-request: host/exclude/dedup filtering would otherwise shrink the pool
@@ -230,7 +230,9 @@ export async function scrapeTrellis(
     } else {
       const candidateByUrl = new Map(candidates.map((candidate) => [candidate.url, candidate]));
       const allThemeNames = THEMES.map((theme) => theme.name);
-      const picks = await curateTrellisArticles(candidates, allThemeNames, anthropicApiKey);
+      const picks = await curateArticles(candidates, allThemeNames, anthropicApiKey, {
+        label: 'Trellis Curator',
+      });
       const scrapedPickUrls = new Set<string>();
       for (const pick of picks) {
         const candidate = candidateByUrl.get(pick.url);
