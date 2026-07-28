@@ -16,8 +16,8 @@ Middle Earth AI instructions for Codex, Claude, and Cursor with equal capability
 
 ## Current capability counts
 
-- Rules: 12
-- Skills: 9
+- Rules: 11
+- Skills: 8
 - Agents/Roles: 2
 
 ## Available skills
@@ -25,7 +25,6 @@ Middle Earth AI instructions for Codex, Claude, and Cursor with equal capability
 - `check` - Run Middle Earth quality gates (lint, test, build) without committing. Runs AI instruction checks when .ai/ files are affected.
 - `commit` - Commit Changes
 - `create-branch` - Create Branch
-- `create-clickup-task` - Create ClickUp Task
 - `create-pr` - Create Pull Request
 - `debug` - Structured debugging workflow for errors, test failures, build issues, and unexpected behavior in the Middle Earth monorepo.
 - `finish-work` - End-to-end workflow to ship code changes as a PR. Creates branch, runs quality gates, commits changes, and creates PR.
@@ -36,7 +35,6 @@ Middle Earth AI instructions for Codex, Claude, and Cursor with equal capability
 
 - `rule-bmad` - BMAD tool/output split and per-app artifact convention for Middle Earth
 - `rule-branch-naming` - Git branch naming conventions aligned with Conventional Commits
-- `rule-clickup-task` - ClickUp task creation and refinement standards
 - `rule-code-comments` - Code comment guidelines for all languages
 - `rule-code-preservation` - Code preservation rules - never delete or revert code without explicit approval
 - `rule-code-style` - Middle Earth code style conventions (TypeScript/JavaScript)
