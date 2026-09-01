@@ -83,7 +83,7 @@
     "nx": "21.6.3",
     "nx-cloud": "19.1.0",
     "prettier-plugin-solidity": "1.3.1",
-    "renovate": "37.199.0",
+    "renovate": "42.99.0",
     "semantic-release": "22.0.12",
     "semantic-release-npm-github-publish": "1.5.5",
     "semantic-release-plus": "20.0.0",
